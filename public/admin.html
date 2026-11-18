@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Staff dashboard - Appointments</title>
+  <link rel="stylesheet" href="/styles.css" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <meta name="theme-color" content="#0f766e" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+  <link rel="icon" href="/icon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="/admin.css" />
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <div class="avatar" id="avatar">BS</div>
+      <div>
+        <h1>Staff dashboard</h1>
+        <p id="bizLine">Loading business...</p>
+      </div>
+    </div>
+
+    <nav class="tabs" id="tabs" aria-label="Sections">
+      <button type="button" data-view="appointments" class="active">Appointments</button>
+      <button type="button" data-view="customers">Customers</button>
+      <button type="button" data-view="messages">Messages</button>
+      <button type="button" data-view="waitlist">Waitlist</button>
+    </nav>
+
+    <div class="top-actions">
+      <a href="/">Customer chat</a>
+      <span class="chip" id="userChip"><span class="dot live"></span><span id="userName">staff</span></span>
+      <button id="logout" type="button">Sign out</button>
+    </div>
+  </header>
+
+  <main class="admin">
+    <section class="stats" aria-label="Summary">
+      <div class="stat"><b id="statToday">-</b><span>Today</span></div>
+      <div class="stat"><b id="statUpcoming">-</b><span>Upcoming</span></div>
+      <div class="stat"><b id="statCancelled">-</b><span>Cancelled</span></div>
+      <div class="stat accent"><b id="statQueue">-</b><span>Messages queued</span></div>
+      <div class="stat"><b id="statWaitlist">-</b><span>Waiting for a slot</span></div>
+    </section>
+
+    <section id="view-appointments">
+      <div class="toolbar">
+        <input class="search" id="search" type="search" placeholder="Search name, email, phone or reference" aria-label="Search appointments" />
+        <div class="filters" role="group" aria-label="Filter appointments">
+          <button type="button" data-filter="upcoming" class="active">Upcoming</button>
+          <button type="button" data-filter="today">Today</button>
+          <button type="button" data-filter="cancelled">Cancelled</button>
+          <button type="button" data-filter="all">All</button>
+        </div>
+        <a class="button" href="/api/appointments/export.csv" download>Export CSV</a>
+        <button class="primary" id="newBooking" type="button">New booking</button>
+      </div>
+
+      <div class="split">
+        <section class="panel-card">
+          <h2>Appointments <span class="small muted" id="listCount"></span></h2>
+          <div id="list"><div class="empty">Loading appointments...</div></div>
+        </section>
+        <section class="panel-card detail" id="detail">
+          <h2>Booking detail</h2>
+          <div class="body"><p class="muted">Select an appointment to see the customer record, history and messages.</p></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="view-customers" hidden>
+      <div class="toolbar">
+        <input class="search" id="customerSearch" type="search" placeholder="Search customers" aria-label="Search customers" />
+        <button id="refreshCustomers" type="button">Refresh</button>
+      </div>
+      <div class="split">
+        <section class="panel-card">
+          <h2>Customers <span class="small muted" id="customerCount"></span></h2>
+          <div class="body"><div class="customers" id="customerList"><p class="muted">Loading...</p></div></div>
+        </section>
+        <section class="panel-card detail" id="customerDetail">
+          <h2>Customer timeline</h2>
+          <div class="body"><p class="muted">Select a customer to see their bookings and conversations.</p></div>
+        </section>
+      </div>
+    </section>
+
+    <section id="view-messages" hidden>
+      <div class="toolbar">
+        <div class="filters" role="group" aria-label="Filter messages">
+          <button type="button" data-notify="pending" class="active">Pending</button>
+          <button type="button" data-notify="sent">Sent</button>
+          <button type="button" data-notify="failed">Failed</button>
+          <button type="button" data-notify="all">All</button>
+        </div>
+        <button class="primary" id="processQueue" type="button">Process due queue</button>
+      </div>
+      <section class="panel-card">
+        <h2>Confirmations &amp; reminders</h2>
+        <div class="body"><div class="notif-list" id="notifList"><p class="muted">Loading...</p></div></div>
+      </section>
+    </section>
+    <section id="view-waitlist" hidden>
+      <div class="toolbar">
+        <div class="filters" role="group" aria-label="Filter waiting list">
+          <button type="button" data-wait="waiting" class="active">Waiting</button>
+          <button type="button" data-wait="notified">Offered a slot</button>
+          <button type="button" data-wait="all">All</button>
+        </div>
+        <button id="refreshWaitlist" type="button">Refresh</button>
+      </div>
+      <section class="panel-card">
+        <h2>Waiting list <span class="small muted" id="waitlistCount"></span></h2>
+        <p class="small muted panel-hint">
+          Customers who asked to be told when a slot opens. Cancelling a booking offers the freed time to the best match automatically.
+        </p>
+        <div class="body"><div class="notif-list" id="waitlistList"><p class="muted">Loading...</p></div></div>
+      </section>
+    </section>
+  </main>
+
+  <dialog id="bookingDialog" aria-labelledby="bookingTitle">
+    <div class="dialog-head">
+      <h2 id="bookingTitle">New booking</h2>
+      <p class="muted small">For phone or walk-in customers. The customer is emailed a confirmation and reminders.</p>
+    </div>
+    <form id="bookingForm">
+      <div class="row">
+        <div class="field"><label for="bName">Full name</label><input id="bName" required autocomplete="off" /></div>
+        <div class="field"><label for="bPhone">Phone</label><input id="bPhone" required autocomplete="off" /></div>
+      </div>
+      <div class="field"><label for="bEmail">Email</label><input id="bEmail" type="email" required autocomplete="off" /></div>
+      <div class="row">
+        <div class="field"><label for="bService">Service</label><select id="bService"></select></div>
+        <div class="field"><label for="bDate">Date</label><input id="bDate" type="date" required /></div>
+      </div>
+      <div class="field">
+        <label>Available times</label>
+        <div class="slots" id="bSlots"><span class="muted small">Choose a date to see openings.</span></div>
+      </div>
+      <div class="field"><label for="bNotes">Notes (optional)</label><input id="bNotes" autocomplete="off" /></div>
+      <div class="error" id="bookingError" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" id="bookingCancel">Cancel</button>
+        <button type="submit" class="primary" id="bookingSubmit">Create booking</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+  <script type="module" src="/admin.js"></script>
+</body>
+</html>

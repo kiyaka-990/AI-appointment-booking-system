@@ -1,0 +1,194 @@
+We are looking for an experienced AI Automation Specialist to build an automated appointment-booking system for a service-based business.
+
+The system should allow a potential customer to make an enquiry, interact with an AI assistant, provide the required information, check appointment availability, book a suitable time, and receive confirmation automatically.
+
+The project should be built as a reusable workflow that could later be adapted for industries such as healthcare, real estate, consulting, beauty, education, and professional services.
+
+Required Workflow
+
+Customer Enquiry → AI Assistant → Information Collection → Availability Check → Booking → CRM Update → Confirmation → Reminder
+
+Core Requirements
+
+1. Customer Interaction
+
+The system should receive a customer enquiry through a webhook, chat interface, or messaging channel.
+
+The AI assistant should be able to:
+
+- Understand the customer's request.
+- Ask relevant follow-up questions.
+- Collect the customer's name, phone number, email, service required, and preferred appointment time.
+- Detect when the customer is ready to book.
+
+2. AI Qualification
+
+The AI should determine:
+
+- What service the customer needs.
+- Whether the request is suitable for the business.
+- The customer's preferred date/time.
+- Any important information required before booking.
+
+The AI should return structured data rather than only plain text.
+
+3. Availability Checking
+
+Connect the automation to a calendar or appointment database.
+
+The system must:
+
+- Check whether the requested time is available.
+- Suggest alternative times if unavailable.
+- Prevent double-booking.
+- Confirm the appointment only after availability has been successfully verified.
+
+4. Booking
+
+Once the customer confirms a suitable time:
+
+- Create the appointment.
+- Store the customer's information.
+- Generate a booking/reference ID.
+- Update the CRM or database.
+
+5. Automated Confirmation
+
+Send the customer a confirmation containing:
+
+- Customer name
+- Service booked
+- Date
+- Time
+- Appointment/reference ID
+- Instructions or location
+
+6. Reminders
+
+Create an automated reminder before the appointment.
+
+The workflow should support at least:
+
+- 24-hour reminder
+- 1-hour reminder
+
+7. CRM Integration
+
+Create or update the customer record in a CRM/database.
+
+Store:
+
+- Customer details
+- Service requested
+- Appointment date/time
+- Booking status
+- AI conversation/summary
+- Reference ID
+
+8. Cancellation/Rescheduling
+
+The system should support basic cancellation or rescheduling.
+
+If the customer wants to change their appointment, the workflow should verify the existing booking before making changes.
+
+Error Handling
+
+The workflow must handle situations such as:
+
+- Missing customer information
+- Invalid date/time
+- No available appointment
+- Duplicate booking
+- Calendar/API failure
+- CRM failure
+- Customer requesting something outside the AI's capabilities
+
+The AI should not confirm a booking unless the booking has actually been created successfully.
+
+Suggested Technology
+
+You may use:
+
+- n8n, Make.com, or Zapier
+- OpenAI or another LLM
+- Google Calendar or another calendar API
+- Airtable, Google Sheets, HubSpot, GoHighLevel, or another CRM
+- WhatsApp, web chat, email, or webhook
+- REST APIs
+
+Deliverables
+
+The freelancer must provide:
+
+- Complete working automation
+- AI system prompt
+- CRM/database structure
+- Calendar integration
+- Appointment confirmation workflow
+- Reminder workflow
+- Cancellation/rescheduling logic
+- Error-handling logic
+- Test data
+- Documentation
+- Short demonstration video
+
+Any API credentials or account access required for implementation will be provided securely after the contract begins.
+
+Testing Requirements
+
+Demonstrate at least these scenarios:
+
+1. Customer successfully books an available appointment.
+2. Requested time is unavailable and the system suggests alternatives.
+3. Customer attempts to create a duplicate booking.
+4. Customer cancels an appointment.
+5. Customer reschedules an appointment.
+6. Required customer information is missing.
+7. Calendar/API failure occurs.
+
+Proposal Questions
+
+Please answer the following:
+
+1. Which automation platform would you use and why?
+2. How would you prevent double-booking?
+3. How would you structure the AI's output?
+4. How would you handle API failures?
+5. How would you design the cancellation/rescheduling process?
+6. How would you make the workflow reusable for different businesses?
+
+Budget: $75–$150
+
+Timeline: 3–5 days
+
+We are looking for someone who can build a reliable business automation, not just connect a few modules together.
+
+Please provide clear answers to the technical questions above and briefly explain your experience with similar automation projects.
+
+$10.00
+
+Fixed-price
+Expert
+I am willing to pay higher rates for the most experienced freelancers
+Project Type:Ongoing project
+Skills and Expertise
+Make.com
+Zapier
+API Integration
+AI Platform
+REST API
+Automated Workflow
+CRM Software
+CRM Automation
+CRM Development
+Agentic Workflows
+AI Agent Development
+Chatbot Development
+Business Process Automation
+OpenAI API
+Prompt Engineering
+Zoho CRM
+Data Integration
+Artificial Intelligence
+AI Voice Agent Development
+n8n

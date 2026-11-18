@@ -1,0 +1,49 @@
+# Render blueprint: https://render.com/docs/blueprint-spec
+# New + Blueprint -> point at this repository. The disk keeps SQLite on /var/data.
+services:
+  - type: web
+    name: appointment-booking
+    runtime: docker
+    plan: starter
+    region: frankfurt
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: booking-data
+      mountPath: /var/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: DATABASE_PATH
+        value: /var/data/booking.db
+      - key: SESSION_SECRET
+        generateValue: true
+      - key: STAFF_USER
+        value: staff
+      - key: STAFF_PASSWORD
+        sync: false
+      - key: API_KEY
+        generateValue: true
+      - key: AI_PROVIDER
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: RESEND_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        sync: false
+      - key: TWILIO_ACCOUNT_SID
+        sync: false
+      - key: TWILIO_AUTH_TOKEN
+        sync: false
+      - key: TWILIO_FROM
+        sync: false
+      - key: NOTIFICATIONS_MODE
+        value: auto

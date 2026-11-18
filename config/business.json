@@ -1,0 +1,183 @@
+{
+  "business": {
+    "id": "bright-smile",
+    "name": "Bright Smile Dental Clinic",
+    "referencePrefix": "BS",
+    "industry": "healthcare",
+    "timezone": "Europe/London",
+    "locale": "en-GB",
+    "currency": "GBP",
+    "location": "12 Market Street, London EC1A 4JQ",
+    "directions": "Ring the brass bell marked 'Clinic' on the left of the main entrance. Paid parking is available on Market Street.",
+    "bookingInstructions": "Please arrive 10 minutes before your appointment and bring a list of any medication you are taking. If you feel unwell, call us instead of attending.",
+    "supportPhone": "+44 20 7946 0100",
+    "supportEmail": "hello@brightsmile.example",
+    "outOfScopeMessage": "I can help with booking, changing or cancelling appointments. Anything clinical or billing related needs a member of our team, so I have flagged your message for them and they will contact you shortly.",
+    "escalationKeywords": [
+      "emergency",
+      "severe pain",
+      "bleeding",
+      "swelling",
+      "chest pain",
+      "pregnant",
+      "child under 3"
+    ],
+    "escalationMessage": "That sounds urgent, so I am not going to book a routine slot. Please call us now on +44 20 7946 0100. If you are having trouble breathing or the swelling is spreading, call 999.",
+    "conversation": {
+      "greeting": "Thanks for getting in touch with Bright Smile Dental Clinic. I can check availability and get you booked in. What do you need help with?",
+      "askForName": "Happy to help. What is your full name?",
+      "askForEmail": "Thanks. What is the best email address to send your confirmation to?",
+      "askForPhone": "And the best phone number in case we need to reach you on the day?",
+      "askForService": "Which service can I book for you?",
+      "askForTime": "What day and time would suit you? For example: 'Tuesday at 2pm' or 'next Friday morning'."
+    }
+  },
+  "calendar": {
+    "slotIntervalMinutes": 15,
+    "bufferBeforeMinutes": 0,
+    "bufferAfterMinutes": 15,
+    "minNoticeMinutes": 120,
+    "maxAdvanceDays": 60,
+    "workingHours": {
+      "mon": [
+        [
+          "09:00",
+          "17:00"
+        ]
+      ],
+      "tue": [
+        [
+          "09:00",
+          "17:00"
+        ]
+      ],
+      "wed": [
+        [
+          "09:00",
+          "17:00"
+        ]
+      ],
+      "thu": [
+        [
+          "09:00",
+          "19:00"
+        ]
+      ],
+      "fri": [
+        [
+          "09:00",
+          "16:00"
+        ]
+      ],
+      "sat": [
+        [
+          "10:00",
+          "14:00"
+        ]
+      ],
+      "sun": []
+    },
+    "blackoutDates": [
+      "2026-12-25",
+      "2026-12-26",
+      "2027-01-01"
+    ]
+  },
+  "services": [
+    {
+      "id": "checkup",
+      "name": "Dental Check-up",
+      "aliases": [
+        "check up",
+        "checkup",
+        "check-up",
+        "exam",
+        "consultation",
+        "routine exam"
+      ],
+      "durationMinutes": 30,
+      "price": 65,
+      "description": "Routine examination, X-rays if needed, and a treatment plan.",
+      "intakeFields": [],
+      "confirmationNote": "No preparation needed, just bring your medication list."
+    },
+    {
+      "id": "hygiene",
+      "name": "Hygiene & Polish",
+      "aliases": [
+        "clean",
+        "cleaning",
+        "hygiene",
+        "polish",
+        "scale"
+      ],
+      "durationMinutes": 45,
+      "price": 85,
+      "description": "Professional scale and polish with one of our hygienists.",
+      "intakeFields": [],
+      "confirmationNote": "Avoid eating for one hour afterwards."
+    },
+    {
+      "id": "whitening",
+      "name": "Teeth Whitening Consultation",
+      "aliases": [
+        "whitening",
+        "white teeth",
+        "bleach"
+      ],
+      "durationMinutes": 45,
+      "price": 95,
+      "description": "Shade assessment and a personalised whitening plan.",
+      "intakeFields": [
+        "intakeNotes"
+      ],
+      "confirmationNote": "Bring any previous whitening trays with you."
+    },
+    {
+      "id": "consultation",
+      "name": "Smile Design Consultation",
+      "aliases": [
+        "smile design",
+        "cosmetic",
+        "veneers consult",
+        "implant consult"
+      ],
+      "durationMinutes": 60,
+      "price": 150,
+      "description": "In-depth consultation for veneers, implants and smile design.",
+      "intakeFields": [
+        "intakeNotes"
+      ],
+      "confirmationNote": "A £25 deposit is taken at the appointment, not online."
+    }
+  ],
+  "reminders": [
+    {
+      "id": "24h",
+      "label": "24-hour reminder",
+      "minutesBefore": 1440,
+      "channel": "email",
+      "template": "reminder-24h"
+    },
+    {
+      "id": "1h",
+      "label": "1-hour reminder",
+      "minutesBefore": 60,
+      "channel": "sms",
+      "template": "reminder-1h"
+    }
+  ],
+  "notifications": {
+    "mode": "auto",
+    "fromEmail": "Bright Smile Clinic <hello@brightsmile.example>",
+    "fromPhone": "BrightSmile",
+    "webhookUrl": "",
+    "webhookToken": "",
+    "smsFrom": ""
+  },
+  "policies": {
+    "cancellationNoticeHours": 24,
+    "maxActiveBookingsPerCustomer": 3,
+    "duplicateWindowMinutes": 1440
+  }
+}
