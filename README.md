@@ -542,7 +542,12 @@ Before going live: set `STAFF_PASSWORD`, `SESSION_SECRET` (otherwise sessions en
 bridge are handled by the built-in scheduler; point your own cron at
 `POST /api/notifications/process` only if you disable it (`SCHEDULER_ENABLED=0`). Behind a reverse
 proxy, set `PUBLIC_BASE_URL` (for signed Twilio webhooks) and `TRUST_PROXY=1` (so rate limits key on
-the real client IP), and `NODE_ENV=production` for Secure cookies and HSTS.
+the real client IP - the Fly proxy's `Fly-Client-IP` and `X-Forwarded-For` are both honoured), and
+`NODE_ENV=production` for Secure cookies and HSTS.
+
+Note that serverless platforms (Vercel functions, AWS Lambda) are not a fit: the app needs a
+writable SQLite file, long-lived SSE streams and the in-process scheduler, none of which serverless
+functions provide. Deploy it as a always-on container (Docker, Fly, Render, Railway, a VPS).
 
 Backups: `npm run backup` writes a consistent `VACUUM INTO` snapshot to `data/backups` and keeps the
 last 14 (`BACKUP_KEEP`, `BACKUP_DIR`). On a host, run it nightly and copy the files off the machine.

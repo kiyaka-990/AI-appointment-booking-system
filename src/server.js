@@ -272,6 +272,10 @@ function rateLimit(key, { limit = 60, windowMs = 60_000 } = {}) {
  */
 function clientIp(req) {
   if (process.env.TRUST_PROXY === '1') {
+    // Fly.io's proxy reports the connecting client in Fly-Client-IP, which a
+    // caller cannot forge when traffic arrives through the Fly proxy.
+    const flyIp = String(req.headers['fly-client-ip'] ?? '').trim();
+    if (flyIp) return flyIp;
     const first = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim();
     if (first) return first;
   }
