@@ -31,6 +31,8 @@
 
     <div class="top-actions">
       <a href="/">Customer chat</a>
+      <span class="chip" id="liveChip" title="Live booking updates"><span class="dot"></span><span id="liveText">Connecting</span></span>
+      <button id="soundToggle" type="button" class="ghost sound-toggle" aria-pressed="true" title="Mute the new-booking chime">Sound on</button>
       <span class="chip" id="userChip"><span class="dot live"></span><span id="userName">staff</span></span>
       <button id="logout" type="button">Sign out</button>
     </div>
@@ -145,6 +147,37 @@
       <div class="dialog-actions">
         <button type="button" id="bookingCancel">Cancel</button>
         <button type="submit" class="primary" id="bookingSubmit">Create booking</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="cancelDialog" aria-labelledby="cancelTitle" aria-describedby="cancelSummary">
+    <div class="dialog-head">
+      <h2 id="cancelTitle">Cancel this booking?</h2>
+      <p class="muted small" id="cancelSummary"></p>
+    </div>
+    <form id="cancelForm">
+      <div class="cancel-notice">
+        <strong>This cannot be undone.</strong>
+        The customer is emailed straight away, their reminders are removed, and the freed time is offered to the waiting list.
+      </div>
+      <div class="field">
+        <label for="cancelReason">Reason (optional, sent to the customer)</label>
+        <div class="reason-chips" id="cancelReasons" role="group" aria-label="Common reasons">
+          <button type="button" data-reason="Cancelled by staff">Cancelled by staff</button>
+          <button type="button" data-reason="Customer requested cancellation">Customer request</button>
+          <button type="button" data-reason="Emergency closure">Emergency closure</button>
+          <button type="button" data-reason="Rescheduling">Rescheduling</button>
+        </div>
+        <textarea id="cancelReason" rows="3" placeholder="Add a note for the customer..."></textarea>
+      </div>
+      <p class="small muted cancel-footnote" id="cancelWaitlistNote">
+        The waiting list is offered the freed slot automatically.
+      </p>
+      <div class="error" id="cancelError" role="alert" hidden></div>
+      <div class="dialog-actions">
+        <button type="button" id="cancelDismiss">Keep booking</button>
+        <button type="submit" class="danger-solid" id="cancelConfirm">Cancel booking</button>
       </div>
     </form>
   </dialog>

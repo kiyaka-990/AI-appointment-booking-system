@@ -15,7 +15,7 @@
     "reset": "node scripts/reset.js",
     "demo": "node scripts/demo.js",
     "icons": "node scripts/make-icons.js",
-    "test": "node --test --test-concurrency=1 tests/messaging.test.js tests/bridge.test.js tests/booking.test.js tests/double-booking.test.js tests/cancel-reschedule.test.js tests/faults.test.js tests/security.test.js tests/proxy.test.js tests/ai.test.js tests/events.test.js tests/waitlist.test.js tests/whatsapp.test.js",
+    "test": "node --test --test-concurrency=1 tests/messaging.test.js tests/bridge.test.js tests/booking.test.js tests/double-booking.test.js tests/cancel-reschedule.test.js tests/faults.test.js tests/security.test.js tests/proxy.test.js tests/ai.test.js tests/events.test.js tests/waitlist.test.js tests/whatsapp.test.js tests/staff-notifications.test.js",
     "reconcile": "node scripts/reconcile.js",
     "backup": "node scripts/backup.js"
   },

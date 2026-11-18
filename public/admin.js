@@ -32,6 +32,198 @@ function toast(message) {
   toast._timer = setTimeout(() => toastEl.classList.remove('show'), 2600);
 }
 
+/* ------------------------------------------------------------ staff live feed */
+
+let staffSource = null;
+let liveFailures = 0;
+let refreshTimer = null;
+
+function setLiveState(status) {
+  const chip = $('liveChip');
+  const text = $('liveText');
+  if (!chip || !text) return;
+  chip.classList.remove('live', 'retrying', 'offline');
+  if (status === 'live') {
+    chip.classList.add('live');
+    text.textContent = 'Live';
+  } else if (status === 'retrying') {
+    chip.classList.add('retrying');
+    text.textContent = 'Reconnecting';
+  } else {
+    chip.classList.add('offline');
+    text.textContent = 'Offline';
+  }
+}
+
+function describeStaffEvent(event) {
+  const action =
+    { created: 'New booking', cancelled: 'Booking cancelled', rescheduled: 'Booking moved' }[event.action] ??
+    'Booking updated';
+  const who = event.customerName ? `${event.customerName} · ` : '';
+  const service = event.serviceName ?? 'Appointment';
+  const when = event.startMs ? ` · ${fmtDate(event.startMs)} ${fmtTime(event.startMs)}` : '';
+  return `${action}: ${who}${service}${when}`;
+}
+
+function scheduleLiveRefresh() {
+  clearTimeout(refreshTimer);
+  refreshTimer = setTimeout(() => {
+    if (state.view === 'appointments') loadAppointments().catch(() => {});
+    if (state.view === 'waitlist') loadWaitlist().catch(() => {});
+    if (state.view === 'messages') loadNotifications().catch(() => {});
+    loadQueueCount();
+  }, 250);
+}
+
+function handleStaffEvent(event) {
+  const chip = $('liveChip');
+  if (chip) {
+    chip.classList.add('flash');
+    clearTimeout(handleStaffEvent._flash);
+    handleStaffEvent._flash = setTimeout(() => chip.classList.remove('flash'), 1200);
+  }
+  toast(describeStaffEvent(event));
+  if (event.action === 'created') chime();
+  scheduleLiveRefresh();
+}
+
+function setupLiveUpdates() {
+  if (!('EventSource' in window)) {
+    setLiveState('offline');
+    return;
+  }
+  staffSource = new EventSource('/api/events?scope=staff');
+  staffSource.addEventListener('open', () => {
+    liveFailures = 0;
+    setLiveState('live');
+  });
+  staffSource.addEventListener('booking', (message) => {
+    let event;
+    try {
+      event = JSON.parse(message.data);
+    } catch {
+      return;
+    }
+    handleStaffEvent(event);
+  });
+  staffSource.addEventListener('error', async () => {
+    liveFailures += 1;
+    setLiveState(liveFailures > 2 ? 'offline' : 'retrying');
+    if (liveFailures === 3) {
+      try {
+        const response = await fetch('/api/auth/session');
+        const session = await response.json().catch(() => ({}));
+        if (response.ok && session.authenticated === false) window.location.replace('/login');
+      } catch {
+        // Keep reconnecting; the stream handles its own retry.
+      }
+    }
+  });
+}
+
+/* --------------------------------------------------------------- alert sound */
+
+let soundEnabled = true;
+let audioCtx = null;
+
+function primeAudio() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume().catch(() => {});
+  } catch {
+    // Audio is a nicety; never break the dashboard for it.
+  }
+}
+
+function chime() {
+  if (!soundEnabled) return;
+  primeAudio();
+  if (!audioCtx) return;
+  try {
+    const start = audioCtx.currentTime;
+    for (const [frequency, delay] of [
+      [880, 0],
+      [1320, 0.14]
+    ]) {
+      const oscillator = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      oscillator.type = 'sine';
+      oscillator.frequency.value = frequency;
+      gain.gain.setValueAtTime(0.0001, start + delay);
+      gain.gain.exponentialRampToValueAtTime(0.16, start + delay + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + delay + 0.34);
+      oscillator.connect(gain).connect(audioCtx.destination);
+      oscillator.start(start + delay);
+      oscillator.stop(start + delay + 0.4);
+    }
+  } catch {
+    // Autoplay policy or a closed device: skip the sound.
+  }
+}
+
+document.addEventListener('pointerdown', primeAudio, { once: true });
+document.addEventListener('keydown', primeAudio, { once: true });
+
+/* ---------------------------------------------------------- cancel booking */
+
+let pendingCancel = null;
+
+function openCancelDialog(appointment, customer) {
+  pendingCancel = { reference: appointment.reference };
+  $('cancelSummary').textContent = [
+    customer?.full_name,
+    appointment.serviceName,
+    `${fmtDate(appointment.startMs)} at ${fmtTime(appointment.startMs)}`,
+    appointment.reference
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  $('cancelReason').value = 'Cancelled by staff';
+  for (const chip of $('cancelReasons').querySelectorAll('button')) {
+    chip.classList.toggle('active', chip.dataset.reason === 'Cancelled by staff');
+  }
+  $('cancelError').hidden = true;
+  $('cancelConfirm').disabled = false;
+  $('cancelConfirm').textContent = 'Cancel booking';
+  $('cancelDismiss').disabled = false;
+  $('cancelDialog').showModal();
+  $('cancelDismiss').focus();
+}
+
+async function submitCancel(event) {
+  event.preventDefault();
+  if (!pendingCancel) return;
+  const reference = pendingCancel.reference;
+  const reason = $('cancelReason').value.trim() || 'Cancelled by staff';
+  const confirm = $('cancelConfirm');
+  const dismiss = $('cancelDismiss');
+
+  $('cancelError').hidden = true;
+  confirm.disabled = true;
+  dismiss.disabled = true;
+  confirm.textContent = 'Cancelling...';
+  $('cancelDialog').setAttribute('aria-busy', 'true');
+  try {
+    await api(`/api/appointments/${encodeURIComponent(reference)}/cancel`, {
+      method: 'POST',
+      body: JSON.stringify({ reason })
+    });
+    $('cancelDialog').close();
+    toast('Booking cancelled. The customer has been emailed.');
+    await loadAppointments();
+    await loadQueueCount();
+    await selectAppointment(reference);
+  } catch (error) {
+    $('cancelError').textContent = error.message;
+    $('cancelError').hidden = false;
+  } finally {
+    $('cancelDialog').removeAttribute('aria-busy');
+    confirm.disabled = false;
+    dismiss.disabled = false;
+    confirm.textContent = 'Cancel booking';
+  }
+}
+
 async function api(path, options = {}) {
   const response = await fetch(path, {
     headers: { 'content-type': 'application/json' },
@@ -225,21 +417,7 @@ async function selectAppointment(reference) {
       reschedule.append(controls, slots);
 
       const cancelButton = el('button', 'danger', 'Cancel booking');
-      cancelButton.addEventListener('click', async () => {
-        const reason = window.prompt('Reason for cancelling (sent to the customer):', 'Cancelled by staff');
-        if (reason === null) return;
-        try {
-          await api(`/api/appointments/${encodeURIComponent(reference)}/cancel`, {
-            method: 'POST',
-            body: JSON.stringify({ reason })
-          });
-          toast('Booking cancelled');
-          await loadAppointments();
-          await selectAppointment(reference);
-        } catch (error) {
-          toast(error.message);
-        }
-      });
+      cancelButton.addEventListener('click', () => openCancelDialog(appointment, customer));
 
       let chosen = null;
       const paintSlots = async (dateIso) => {
@@ -689,6 +867,34 @@ async function boot() {
   $('bService').addEventListener('change', loadBookingSlots);
   $('bDate').addEventListener('change', loadBookingSlots);
 
+  $('cancelDismiss').addEventListener('click', () => $('cancelDialog').close());
+  $('cancelForm').addEventListener('submit', submitCancel);
+  $('cancelDialog').addEventListener('close', () => {
+    pendingCancel = null;
+  });
+  $('cancelDialog').addEventListener('click', (event) => {
+    if (event.target === $('cancelDialog')) $('cancelDialog').close();
+  });
+  for (const chip of $('cancelReasons').querySelectorAll('button')) {
+    chip.addEventListener('click', () => {
+      $('cancelReason').value = chip.dataset.reason;
+      for (const other of $('cancelReasons').querySelectorAll('button')) {
+        other.classList.toggle('active', other === chip);
+      }
+      $('cancelReason').focus();
+    });
+  }
+  $('cancelReason').addEventListener('input', () => {
+    for (const chip of $('cancelReasons').querySelectorAll('button')) chip.classList.remove('active');
+  });
+
+  $('soundToggle').addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    $('soundToggle').setAttribute('aria-pressed', String(soundEnabled));
+    $('soundToggle').textContent = soundEnabled ? 'Sound on' : 'Sound off';
+    toast(soundEnabled ? 'New-booking sound on' : 'New-booking sound muted');
+  });
+
   $('customerSearch').addEventListener('input', (event) => {
     state.customerSearch = event.target.value;
     loadCustomers().catch((error) => toast(error.message));
@@ -717,6 +923,7 @@ async function boot() {
   await loadAppointments();
   await loadQueueCount();
   loadWaitlist().catch(() => {});
+  setupLiveUpdates();
   setInterval(() => {
     if (state.view === 'appointments') loadAppointments().catch(() => {});
     if (state.view === 'waitlist') loadWaitlist().catch(() => {});

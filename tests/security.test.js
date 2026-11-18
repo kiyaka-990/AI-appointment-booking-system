@@ -89,6 +89,25 @@ test('customer data and workflow controls require a session', async () => {
   assert.equal(booking.status, 401);
 });
 
+test('the staff event stream requires a session and then streams', async () => {
+  const anonymous = await request('/api/events?scope=staff');
+  assert.equal(anonymous.status, 401);
+
+  const cookie = await signIn();
+  const controller = new AbortController();
+  const response = await fetch(`${origin}/api/events?scope=staff`, {
+    headers: { cookie },
+    signal: controller.signal
+  });
+  assert.equal(response.status, 200);
+  assert.match(response.headers.get('content-type'), /text\/event-stream/);
+  const reader = response.body.getReader();
+  const { value } = await reader.read();
+  assert.match(new TextDecoder().decode(value), /: connected/);
+  controller.abort();
+  await reader.cancel().catch(() => {});
+});
+
 test('public endpoints still work without a session', async () => {
   const config = await request('/api/config');
   assert.equal(config.status, 200);

@@ -140,6 +140,8 @@ To reuse for another industry, copy the file, change the business block and serv
 | GET | `/api/availability?service=checkup&from=YYYY-MM-DD&days=7` | Availability grouped by day |
 | POST | `/api/availability/check` | Check one exact slot (`service`, `start`) and get alternatives |
 | POST | `/api/chat` | One conversation turn (`conversationId`, `message`) |
+| GET | `/api/events?conversationId=...` | Live booking updates for one chat (server-sent events) |
+| GET | `/api/events?scope=staff` | Live booking updates for the dashboard (staff session, server-sent events) |
 | POST | `/api/enquiries` | Inbound enquiry webhook (optional `x-webhook-token`) |
 | GET | `/api/conversations/:id` | Conversation, messages and the stored AI summary |
 | POST | `/api/bookings` | Direct booking (`name`, `email`, `phone`, `service`, `start`, optional `idempotencyKey`) |
@@ -285,6 +287,11 @@ open:
    granted, `showNotification` displays the update while the app is open or minimised as an installed
    app. This is the Notification API, not a push service: for alerts when the app is fully closed,
    point `notifications.mode` at a push provider or rely on email/SMS.
+5. **Staff alerts** - the dashboard keeps `GET /api/events?scope=staff` open (session-protected,
+   same-origin only). A new booking, move or cancellation reaches every open dashboard in under a
+   second as a toast, a chime and a refreshed list; the 30-second poll remains as a fallback. In
+   parallel, `owner-booking` emails `business.supportEmail` with the full booking, and an optional
+   short `owner-alert` SMS/WhatsApp goes to `OWNER_PHONE` when Twilio is configured.
 
 Reminders (24h email, 1h SMS) complete the sequence. The outbox retries with backoff, so a provider
 outage delays a message instead of losing it.
@@ -304,6 +311,11 @@ force one. Resend receives `from`, `to`, `subject`, and both a plain-text and an
 form-encoded `To`/`From`/`Body` with basic auth. Provider errors are stored on the outbox row
 (`"Resend rejected the email: ..."`) and retried, so a bounced configuration is visible on the
 dashboard rather than silent. `GET /api/health` reports `delivery: { mode, email, sms }`.
+
+Owner alerts reuse the same Twilio sender. Set `OWNER_PHONE` (or `business.ownerPhone`) and optionally
+`OWNER_ALERT_CHANNEL=whatsapp`; WhatsApp also needs `TWILIO_WHATSAPP_FROM`. If no phone is set, or no
+provider is configured, the SMS/WhatsApp alert is skipped entirely rather than being marked as sent.
+`GET /api/health` reports `ownerAlert: { channel, configured, provider }` for a quick check.
 
 Resend requires the sending domain to be verified, and `EMAIL_FROM` must be on it. Twilio requires an
 E.164 `TWILIO_FROM` and, for UK numbers, the destination country enabled in your account.

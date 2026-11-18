@@ -12,6 +12,7 @@
     "bookingInstructions": "Please arrive 10 minutes before your appointment and bring a list of any medication you are taking. If you feel unwell, call us instead of attending.",
     "supportPhone": "+44 20 7946 0100",
     "supportEmail": "hello@brightsmile.example",
+    "ownerPhone": "",
     "outOfScopeMessage": "I can help with booking, changing or cancelling appointments. Anything clinical or billing related needs a member of our team, so I have flagged your message for them and they will contact you shortly.",
     "escalationKeywords": [
       "emergency",
@@ -173,7 +174,8 @@
     "fromPhone": "BrightSmile",
     "webhookUrl": "",
     "webhookToken": "",
-    "smsFrom": ""
+    "smsFrom": "",
+    "ownerAlertChannel": "sms"
   },
   "policies": {
     "cancellationNoticeHours": 24,

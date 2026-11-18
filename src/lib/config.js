@@ -69,6 +69,19 @@ export function reminderRules() {
   return getConfig().reminders ?? [];
 }
 
+/**
+ * Where to send the short "new booking" alert. The email always goes to
+ * `business.supportEmail`; SMS/WhatsApp is opt-in by setting a phone number.
+ */
+export function ownerAlertSettings() {
+  const cfg = getConfig();
+  const phone = String(process.env.OWNER_PHONE || cfg.business.ownerPhone || '').trim();
+  const requested = String(
+    process.env.OWNER_ALERT_CHANNEL || cfg.notifications?.ownerAlertChannel || 'sms'
+  ).toLowerCase();
+  return { phone, channel: requested === 'whatsapp' ? 'whatsapp' : 'sms' };
+}
+
 export function services() {
   return getConfig().services;
 }

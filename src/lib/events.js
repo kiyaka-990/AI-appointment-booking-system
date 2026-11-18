@@ -5,6 +5,12 @@
  */
 const listeners = new Map();
 
+/**
+ * Staff dashboard channel. Only the authenticated `/api/events?scope=staff`
+ * endpoint subscribes to it, so these events may carry the customer's name.
+ */
+export const STAFF_CHANNEL = 'staff';
+
 export function subscribe(conversationId, handler) {
   if (!conversationId) return () => {};
   const set = listeners.get(conversationId) ?? new Set();
@@ -40,6 +46,27 @@ export function appointmentEvent(appointment, status) {
     startMs: appointment?.startMs ?? null,
     serviceName: appointment?.serviceName ?? null
   };
+}
+
+/**
+ * Event for the staff dashboard. It is only ever subscribed to from an
+ * authenticated session, so it can include the customer's name for the toast.
+ */
+export function staffEvent(appointment, action, { customerName = null, previousStartMs = null } = {}) {
+  return {
+    type: 'booking',
+    action,
+    reference: appointment?.reference ?? null,
+    startMs: appointment?.startMs ?? null,
+    endMs: appointment?.endMs ?? null,
+    serviceName: appointment?.serviceName ?? null,
+    customerName,
+    previousStartMs
+  };
+}
+
+export function publishStaff(event) {
+  return publish(STAFF_CHANNEL, event);
 }
 
 export function listenerCount(conversationId) {

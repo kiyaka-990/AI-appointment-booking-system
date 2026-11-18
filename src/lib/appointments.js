@@ -7,11 +7,12 @@ import {
   run,
   transaction
 } from './db.js';
-import { business, calendarRules, findService, policies, reminderRules } from './config.js';
+import { business, calendarRules, findService, ownerAlertSettings, policies, reminderRules } from './config.js';
 import { checkSlot } from './availability.js';
 import { guard } from './faults.js';
-import { appointmentEvent, publish } from './events.js';
+import { appointmentEvent, publish, publishStaff, staffEvent } from './events.js';
 import { flushBridgeOutbox, queueAppointmentEvent } from './bridge.js';
+import { channelProvider } from './messaging.js';
 import { offerFreedSlot } from './waitlist.js';
 import { AppError, ERROR_CODES } from './errors.js';
 import { normaliseEmail, normalisePhone } from './crm.js';
@@ -214,6 +215,52 @@ function scheduleReminders(handle, appointment, customer, now) {
 }
 
 /** Tell the business owner/staff about a new booking. Never blocks the booking. */
+let warnedOwnerAlert = false;
+
+function enqueueOwnerAlert(handle, appointment, customer, { channel, notes }) {
+  const { phone, channel: alertChannel } = ownerAlertSettings();
+  if (!phone) return null;
+  if (channelProvider(alertChannel) === 'console') {
+    if (!warnedOwnerAlert) {
+      warnedOwnerAlert = true;
+      console.warn(
+        `[notify] OWNER_PHONE is set but no ${alertChannel} provider is configured - owner alerts will not be sent.`
+      );
+    }
+    return null;
+  }
+
+  const cfg = business();
+  const rendered = renderTemplate('owner-alert', {
+    customer: customer.record,
+    service: { ...appointment.service, name: appointment.serviceName },
+    appointment,
+    tz: cfg.timezone,
+    extra: { channel, notes }
+  });
+  const timestamp = nowIso();
+  handle
+    .prepare(
+      `INSERT OR IGNORE INTO outbox
+         (appointment_id, customer_id, channel, recipient, template, subject, body,
+          status, scheduled_for, dedupe_key, attempts, created_at, updated_at)
+       VALUES (?, ?, ?, ?, 'owner-alert', ?, ?, 'pending', ?, ?, 0, ?, ?)`
+    )
+    .run(
+      appointment.id,
+      customer.record.id,
+      alertChannel,
+      phone,
+      rendered.subject,
+      rendered.body,
+      timestamp,
+      `owner-alert:${appointment.id}`,
+      timestamp,
+      timestamp
+    );
+  return handle.prepare('SELECT id FROM outbox WHERE dedupe_key = ?').get(`owner-alert:${appointment.id}`)?.id ?? null;
+}
+
 function enqueueOwnerNotice(handle, appointment, customer, { channel = 'booking', notes = null } = {}) {
   const cfg = business();
   const rendered = renderTemplate('owner-booking', {
@@ -242,7 +289,10 @@ function enqueueOwnerNotice(handle, appointment, customer, { channel = 'booking'
       timestamp,
       timestamp
     );
-  return handle.prepare('SELECT id FROM outbox WHERE dedupe_key = ?').get(`owner-booking:${appointment.id}`)?.id ?? null;
+  const emailId =
+    handle.prepare('SELECT id FROM outbox WHERE dedupe_key = ?').get(`owner-booking:${appointment.id}`)?.id ?? null;
+  const alertId = enqueueOwnerAlert(handle, appointment, customer, { channel, notes });
+  return { emailId, alertId };
 }
 
 function enqueueConfirmation(handle, appointment, customer) {
@@ -440,7 +490,14 @@ export function createAppointment({
 
       const confirmation = enqueueConfirmation(handle, created, customerContext);
       const ownerNotice = enqueueOwnerNotice(handle, created, customerContext, { channel: source, notes });
-      return { appointment: created, created: true, replayed: false, confirmationId: confirmation?.id ?? null, ownerNoticeId: ownerNotice };
+      return {
+        appointment: created,
+        created: true,
+        replayed: false,
+        confirmationId: confirmation?.id ?? null,
+        ownerNoticeId: ownerNotice.emailId,
+        ownerAlertId: ownerNotice.alertId
+      };
     });
   } catch (error) {
     // Belt and braces for a writer that bypasses the checks above (another
@@ -470,13 +527,16 @@ export function createAppointment({
   });
 
   publish(conversationId, appointmentEvent(result.appointment, 'confirmed'));
+  publishStaff(
+    staffEvent(result.appointment, 'created', { customerName: customer.full_name ?? null })
+  );
   notifyBridge('created', result.appointment, customer);
 
   return {
     appointment: result.appointment,
     created: true,
     replayed: false,
-    deliveries: [result.confirmationId, result.ownerNoticeId]
+    deliveries: [result.confirmationId, result.ownerNoticeId, result.ownerAlertId]
   };
 }
 
@@ -531,6 +591,7 @@ export async function cancelAppointment({ reference, appointment = null, reason 
   });
 
   publish(target.conversationId, appointmentEvent(target, 'cancelled'));
+  publishStaff(staffEvent(target, 'cancelled', { customerName: customerRow?.full_name ?? null }));
   notifyBridge('cancelled', { ...target, status: 'cancelled' }, customerRow);
 
   // The freed slot goes to whoever is waiting for it.
@@ -661,6 +722,12 @@ export async function rescheduleAppointment({ reference, appointment = null, sta
   });
 
   publish(updated.conversationId, appointmentEvent(updated, 'rescheduled'));
+  publishStaff(
+    staffEvent(updated, 'rescheduled', {
+      customerName: customerRow?.full_name ?? null,
+      previousStartMs
+    })
+  );
   notifyBridge('rescheduled', updated, customerRow);
 
   await deliverRows([notification?.id]);

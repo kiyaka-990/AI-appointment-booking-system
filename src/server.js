@@ -3,7 +3,7 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { publicConfig, business, findService, getConfig } from './lib/config.js';
+import { publicConfig, business, findService, getConfig, ownerAlertSettings } from './lib/config.js';
 import { handleMessage, ensureConversation, conversationMessages, loadConversation } from './lib/agent.js';
 import { availabilityCalendar, checkSlot, slotsForDay, suggestAlternatives } from './lib/availability.js';
 import {
@@ -19,14 +19,14 @@ import { customerTimeline, getCustomer, listCustomers, normalisePhone, upsertCus
 import { attemptDelivery, deliverRows, listOutbox, processOutbox } from './lib/notifications.js';
 import { FAULT_KEYS, listFaults, resetFaults, setFaults } from './lib/faults.js';
 import { aiStatus } from './lib/ai.js';
-import { deliverySummary } from './lib/messaging.js';
+import { channelProvider, deliverySummary } from './lib/messaging.js';
 import { flushBridgeOutbox, listBridgeOutbox } from './lib/bridge.js';
 import { leaveWaitlist, listWaitlist } from './lib/waitlist.js';
 import { claimWebhookEvent, completeWebhookEvent, failWebhookEvent } from './lib/webhooks.js';
 import { AppError, ERROR_CODES } from './lib/errors.js';
 import { parseDateTime } from './lib/parse-datetime.js';
 import { all, audit, closeDatabase, nowIso } from './lib/db.js';
-import { subscribe } from './lib/events.js';
+import { STAFF_CHANNEL, subscribe } from './lib/events.js';
 import {
   assertStaff,
   authConfig,
@@ -329,6 +329,28 @@ function authoriseStaff(req, method) {
 }
 
 /**
+ * Open a server-sent-event stream for one pub/sub channel. The caller is
+ * responsible for authenticating staff-scoped streams before calling this.
+ */
+function openEventStream(req, res, channel) {
+  res.writeHead(200, {
+    'content-type': 'text/event-stream; charset=utf-8',
+    'cache-control': 'no-store',
+    connection: 'keep-alive',
+    'x-accel-buffering': 'no'
+  });
+  res.write(': connected\n\n');
+  const unsubscribe = subscribe(channel, (event) => {
+    res.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
+  });
+  const heartbeat = setInterval(() => res.write(': ping\n\n'), 25_000);
+  req.on('close', () => {
+    clearInterval(heartbeat);
+    unsubscribe();
+  });
+}
+
+/**
  * CSV cell. Besides quoting, customer-supplied text is neutralised when it
  * begins with a spreadsheet-significant character (=, +, -, @, tab): Excel and
  * Sheets would otherwise execute it as a formula (CSV formula injection) when
@@ -343,12 +365,18 @@ function csvCell(value) {
 /* ------------------------------------------------------------------- routes */
 
 function health() {
+  const ownerAlert = ownerAlertSettings();
   return {
     ok: true,
     business: business().name,
     database: process.env.DATABASE_PATH || 'data/booking.db',
     ai: aiStatus(),
     delivery: deliverySummary(),
+    ownerAlert: {
+      channel: ownerAlert.channel,
+      configured: Boolean(ownerAlert.phone),
+      provider: ownerAlert.phone ? channelProvider(ownerAlert.channel) : null
+    },
     scheduler: schedulerConfig(),
     staffAuth: authConfig().usingDemoPassword ? 'demo-password' : 'configured',
     apiKey: Boolean(process.env.API_KEY),
@@ -819,27 +847,21 @@ async function route(req, res) {
     return sendJson(res, 200, slotCheck(await readJson(req)));
   }
   if (method === 'GET' && pathname === '/api/events') {
+    const scope = url.searchParams.get('scope');
+    if (scope === 'staff') {
+      if (!readSession(req)) {
+        throw new AppError(ERROR_CODES.UNAUTHORISED, 'Staff sign-in required.', { status: 401 });
+      }
+      rateLimit(`events:staff:${clientIp(req)}`, { limit: 60, windowMs: 60_000 });
+      return openEventStream(req, res, STAFF_CHANNEL);
+    }
+
     const conversationId = url.searchParams.get('conversationId') ?? '';
     if (!/^cnv_[a-zA-Z0-9]{6,32}$/.test(conversationId)) {
       throw new AppError(ERROR_CODES.VALIDATION_FAILED, 'A valid conversationId is required.');
     }
     rateLimit(`events:${clientIp(req)}`, { limit: 30, windowMs: 60_000 });
-    res.writeHead(200, {
-      'content-type': 'text/event-stream; charset=utf-8',
-      'cache-control': 'no-store',
-      connection: 'keep-alive',
-      'x-accel-buffering': 'no'
-    });
-    res.write(': connected\n\n');
-    const unsubscribe = subscribe(conversationId, (event) => {
-      res.write(`event: ${event.type}\ndata: ${JSON.stringify(event)}\n\n`);
-    });
-    const heartbeat = setInterval(() => res.write(': ping\n\n'), 25_000);
-    req.on('close', () => {
-      clearInterval(heartbeat);
-      unsubscribe();
-    });
-    return undefined;
+    return openEventStream(req, res, conversationId);
   }
 
   if (method === 'POST' && pathname === '/api/chat') {

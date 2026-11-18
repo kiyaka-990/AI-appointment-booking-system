@@ -139,6 +139,16 @@ export function renderTemplate(template, context) {
         ].join('\n')
       };
 
+    case 'owner-alert':
+      return {
+        subject: `New booking ${ref}`,
+        body: [
+          `New booking: ${customer.full_name} - ${service.name}`,
+          `${dateText} at ${timeText} (${ref})`,
+          `${cfg.name}${extra.channel ? ` via ${extra.channel}` : ''}`
+        ].join('\n')
+      };
+
     case 'waitlist-joined':
       return {
         subject: `You're on the waiting list for ${service.name}`,
