@@ -1,0 +1,844 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>AI Appointment Booking System - Commercial Kit</title>
+<style>
+  :root {
+    --ink: #101d2e;
+    --navy: #0f2744;
+    --teal: #0d6e68;
+    --teal-light: #e6f2f1;
+    --sand: #f6f3ee;
+    --gold: #b58a3c;
+    --muted: #5b6b7d;
+    --line: #d9e0e8;
+    --red: #a63b3b;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  body {
+    font-family: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    font-size: 9.6pt;
+    line-height: 1.4;
+    background: #e9edf1;
+  }
+  .page {
+    width: 210mm;
+    height: 296mm;
+    margin: 0 auto 8mm;
+    background: #fff;
+    padding: 13mm 13mm 10mm;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(16, 29, 46, .12);
+  }
+  @media print {
+    body { background: #fff; }
+    .page { margin: 0; box-shadow: none; page-break-after: always; }
+    .page:last-child { page-break-after: auto; }
+  }
+  @page { size: A4; margin: 0; }
+
+  /* ---------- shared type ---------- */
+  .eyebrow {
+    font-size: 8pt; letter-spacing: .18em; text-transform: uppercase;
+    color: var(--teal); font-weight: 700; margin-bottom: 4mm;
+  }
+  h1 { font-size: 27pt; line-height: 1.12; letter-spacing: -.01em; font-weight: 700; }
+  h2 { font-size: 16pt; line-height: 1.2; margin-bottom: 2.5mm; font-weight: 700; letter-spacing: -.005em; }
+  h3 { font-size: 10.5pt; margin: 3mm 0 1.2mm; font-weight: 700; color: var(--navy); }
+  h4 { font-size: 9.2pt; margin: 2.4mm 0 .8mm; font-weight: 700; color: var(--teal); }
+  p { margin-bottom: 2.5mm; }
+  ul, ol { margin: 0 0 2.5mm 4.5mm; }
+  li { margin-bottom: 1.2mm; }
+  strong { color: var(--navy); }
+  .lead { font-size: 11.4pt; color: var(--muted); line-height: 1.45; }
+  .small { font-size: 8pt; color: var(--muted); }
+  .tiny { font-size: 7.4pt; color: var(--muted); line-height: 1.35; }
+  .rule { height: 2.5pt; width: 26mm; background: var(--teal); margin: 0 0 4mm; }
+  .muted { color: var(--muted); }
+  .teal { color: var(--teal); }
+  .nowrap { white-space: nowrap; }
+
+  /* ---------- cover ---------- */
+  .cover {
+    background: var(--navy);
+    color: #fff;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+  }
+  .cover::before {
+    content: "";
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(60mm 60mm at 92% 8%, rgba(13,110,104,.55), transparent 70%),
+      radial-gradient(80mm 80mm at 8% 100%, rgba(181,138,60,.28), transparent 70%);
+  }
+  .cover-inner { position: relative; padding: 18mm 16mm; display: flex; flex-direction: column; height: 100%; }
+  .cover .eyebrow { color: #7fd1cc; }
+  .cover h1 { font-size: 33pt; line-height: 1.08; max-width: 148mm; }
+  .cover .lead { color: #c8d4e2; max-width: 140mm; margin-top: 6mm; font-size: 12pt; }
+  .cover-spacer { flex: 1; }
+  .cover-facts { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3mm; margin-top: 10mm; }
+  .fact {
+    border: 1px solid rgba(255,255,255,.16);
+    border-radius: 2.5mm;
+    padding: 3.5mm 3mm;
+    background: rgba(255,255,255,.05);
+  }
+  .fact b { display: block; font-size: 15pt; color: #fff; line-height: 1.1; }
+  .fact span { font-size: 7.5pt; color: #a9bacd; letter-spacing: .04em; text-transform: uppercase; }
+  .cover-foot { display: flex; justify-content: space-between; font-size: 8pt; color: #9fb2c6; margin-top: 8mm; }
+  .cover-band {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 6mm;
+    background: linear-gradient(90deg, var(--teal), #1f9c94 50%, var(--gold));
+  }
+
+  /* ---------- page chrome ---------- */
+  .page-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    border-bottom: .6pt solid var(--line); padding-bottom: 2mm; margin-bottom: 5mm;
+  }
+  .page-head .label { font-size: 7.5pt; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+  .page-head .num { font-family: Georgia, "Times New Roman", serif; font-style: italic; color: var(--teal); font-size: 10pt; }
+  .page-foot {
+    position: absolute; left: 13mm; right: 13mm; bottom: 5mm;
+    display: flex; justify-content: space-between; align-items: center;
+    border-top: .6pt solid var(--line); padding-top: 2mm;
+    font-size: 7pt; color: var(--muted); letter-spacing: .04em;
+  }
+
+  /* ---------- components ---------- */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6mm; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4mm; }
+  .card { border: .8pt solid var(--line); border-radius: 2.5mm; padding: 4mm; background: #fff; }
+  .card.sand { background: var(--sand); border-color: #e8e1d6; }
+  .card.navy { background: var(--navy); color: #fff; border: 0; }
+  .card.navy h3, .card.navy strong { color: #fff; }
+  .card.navy .muted { color: #b9c7d6; }
+  .card h3 { margin-top: 0; }
+  .stat { font-family: Georgia, serif; font-size: 22pt; color: var(--teal); line-height: 1; }
+  .stat-label { font-size: 8pt; color: var(--muted); margin-top: 1.5mm; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 8.1pt; margin: 1.5mm 0 2.5mm; }
+  th {
+    background: var(--navy); color: #fff; text-align: left;
+    padding: 1.7mm 2.2mm; font-size: 7.3pt; font-weight: 600;
+    letter-spacing: .05em; text-transform: uppercase;
+  }
+  td { padding: 1.6mm 2.2mm; border-bottom: .5pt solid var(--line); vertical-align: top; }
+  tr:nth-child(even) td { background: #f7f9fb; }
+  td.num, th.num { text-align: right; white-space: nowrap; }
+  .price { font-weight: 700; color: var(--navy); white-space: nowrap; }
+  .tag {
+    display: inline-block; font-size: 7pt; font-weight: 700; letter-spacing: .06em;
+    text-transform: uppercase; padding: .8mm 2mm; border-radius: 1.5mm;
+    background: var(--teal-light); color: var(--teal); margin-right: 1mm;
+  }
+  .tag.gold { background: #f6eddc; color: #8a6420; }
+  .tag.red { background: #fbeceb; color: var(--red); }
+  .callout {
+    border-left: 3pt solid var(--teal); background: var(--teal-light);
+    padding: 2.8mm 3.4mm; border-radius: 0 2mm 2mm 0; margin: 2.2mm 0;
+  }
+  .callout.gold { border-color: var(--gold); background: #faf4e8; }
+  .callout.navy { border-color: var(--navy); background: #eef2f7; }
+  .callout p:last-child { margin: 0; }
+  blockquote {
+    font-family: Georgia, "Times New Roman", serif; font-style: italic;
+    font-size: 10.6pt; color: var(--navy); border-left: 3pt solid var(--gold);
+    padding: 1.6mm 0 1.6mm 3.6mm; margin: 2.4mm 0;
+  }
+  .script {
+    font-family: Consolas, "Courier New", monospace; font-size: 7.3pt;
+    background: #f4f6f8; border: .5pt solid var(--line); border-radius: 1.5mm;
+    padding: 2.4mm; margin: 1.4mm 0 2.2mm; white-space: pre-wrap; line-height: 1.4;
+  }
+  .checklist { list-style: none; margin-left: 0; }
+  .checklist li { padding-left: 5mm; position: relative; margin-bottom: 1.6mm; }
+  .checklist li::before {
+    content: ""; position: absolute; left: 0; top: 1.2mm;
+    width: 2.6mm; height: 2.6mm; border: .9pt solid var(--teal); border-radius: .6mm;
+  }
+  .play { border: .8pt solid var(--line); border-radius: 2.2mm; padding: 2.8mm 3.4mm; margin-bottom: 2.2mm; background: #fff; }
+  .play h3 { margin: 0 0 .8mm; font-size: 9.8pt; }
+  .play .meta { font-size: 7.2pt; color: var(--muted); margin-bottom: 1mm; }
+  .play .meta b { color: var(--teal); }
+  .two-col-list { columns: 2; column-gap: 8mm; }
+  .two-col-list li { break-inside: avoid; }
+  .fn { font-size: 7pt; vertical-align: super; color: var(--teal); }
+  .divider { height: .6pt; background: var(--line); margin: 4mm 0; }
+  .kpi-row { display: flex; gap: 3.5mm; margin: 3mm 0; }
+  .kpi { flex: 1; border: .8pt solid var(--line); border-radius: 2mm; padding: 3mm; text-align: center; }
+  .kpi b { display: block; font-family: Georgia, serif; font-size: 16pt; color: var(--navy); }
+  .kpi span { font-size: 7.2pt; color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+</style>
+</head>
+<body>
+
+<!-- ============================== 1 COVER ============================== -->
+<section class="page cover">
+  <div class="cover-inner">
+    <div class="eyebrow">Commercial kit &middot; November 2026 &middot; v1.0</div>
+    <h1>An AI receptionist that never misses a booking</h1>
+    <p class="lead">Positioning, market-tested pricing, sales channels and a 90-day launch plan for selling this system as a done-for-you service, a licensed product &mdash; or the complete codebase.</p>
+    <div class="cover-spacer"></div>
+    <div class="cover-facts">
+      <div class="fact"><b>70</b><span>automated tests</span></div>
+      <div class="fact"><b>26/26</b><span>demo checks</span></div>
+      <div class="fact"><b>&pound;0</b><span>npm dependencies</span></div>
+      <div class="fact"><b>3</b><span>AI providers, no lock-in</span></div>
+    </div>
+    <div class="cover-foot">
+      <span>AI Appointment Booking System &mdash; sales &amp; marketing plan</span>
+      <span>Confidential &middot; prepared for the system owner</span>
+    </div>
+    <div class="cover-band"></div>
+  </div>
+</section>
+
+<!-- ============================== 2 THE OFFER ============================== -->
+<section class="page">
+  <div class="page-head"><span class="label">01 &middot; The offer</span><span class="num">2</span></div>
+  <h2>What you are actually selling</h2>
+  <div class="rule"></div>
+  <p class="lead">Not "a chatbot". A receptionist that owns the diary: it answers in seconds, qualifies the customer, checks real availability, books, confirms, reminds, and handles changes &mdash; on the business's own website, with the business's own data.</p>
+
+  <div class="grid-2" style="margin-top:5mm">
+    <div>
+      <h3>The problem it removes</h3>
+      <ul>
+        <li><strong>Missed enquiries:</strong> a message at 9pm waits until 9am &mdash; and the customer books elsewhere.</li>
+        <li><strong>Phone time:</strong> staff spend hours a week on "have you got anything Tuesday?".</li>
+        <li><strong>No-shows:</strong> 10&ndash;15% of slots silently empty; reminders help but nobody has time to send them.</li>
+        <li><strong>Double bookings:</strong> two people tap "book" at once and the diary breaks.</li>
+      </ul>
+      <h3>What it does, end to end</h3>
+      <ol>
+        <li><strong>Answers</strong> every enquiry &mdash; website chat, embedded widget, WhatsApp.</li>
+        <li><strong>Qualifies</strong> &mdash; name, email, phone, service, preferred time; one question at a time.</li>
+        <li><strong>Checks the real calendar</strong> &mdash; hours, buffers, blackouts, notice period; refuses conflicts.</li>
+        <li><strong>Books and confirms</strong> &mdash; reference number, calendar file, confirmation email.</li>
+        <li><strong>Reminds</strong> &mdash; 24h email, 1h SMS, re-armed on every change.</li>
+        <li><strong>Handles changes</strong> &mdash; cancel and reschedule by reply, with identity checks.</li>
+        <li><strong>Tells the owner</strong> &mdash; dashboard, CSV export, audit trail, optional CRM bridge.</li>
+      </ol>
+    </div>
+    <div>
+      <div class="card sand">
+        <h3>Proof points that sell (and that most competitors cannot say)</h3>
+        <ul class="checklist" style="margin-bottom:0">
+          <li><strong>70 automated tests</strong> covering booking, double booking, rescheduling, provider outages, security and webhook dedupe.</li>
+          <li><strong>26/26 scenario checks</strong> in the demo script.</li>
+          <li><strong>Double booking is impossible by design</strong> &mdash; prevented at the database level, not by prompt wording.</li>
+          <li><strong>Survives AI outages</strong> &mdash; deterministic fallback still books and confirms.</li>
+          <li><strong>Twilio retry-safe</strong> &mdash; provider webhooks are deduplicated, so a retry can never double-book.</li>
+          <li><strong>Zero npm dependencies</strong> &mdash; tiny attack surface, no supply-chain risk, Node 22.5+ only.</li>
+          <li><strong>Three AI providers</strong> &mdash; Gemini, OpenAI or Anthropic; switch by environment variable.</li>
+          <li><strong>Deploys as one container</strong> &mdash; Fly.io, Render, Docker or a VPS; ~&pound;3&ndash;4/month to run.</li>
+        </ul>
+      </div>
+      <blockquote>"If the AI provider is down, the booking flow still works. That sentence closes most technical objections."</blockquote>
+    </div>
+  </div>
+
+  <h3>Positioning statement (use it verbatim)</h3>
+  <div class="callout navy">
+    <p><em>"The only AI booking system that owns its calendar, keeps booking when the AI is down, and runs on infrastructure the business controls &mdash; from &pound;199/month, not &pound;15,000 to build."</em></p>
+  </div>
+  <p class="tiny">Honest limits, said early: one deployment per business (deliberately not multi-tenant), SQLite storage on a single node, integrations with existing PMS systems priced separately. Stating this up front builds trust and kills scope creep.</p>
+
+  <div class="page-foot"><span>AI Appointment Booking System &mdash; Commercial Kit</span><span>2 / 12</span></div>
+</section>
+
+<!-- ============================== 3 MARKET ============================== -->
+<section class="page">
+  <div class="page-head"><span class="label">02 &middot; Market</span><span class="num">3</span></div>
+  <h2>Why this sells now &mdash; and where it fits</h2>
+  <div class="rule"></div>
+
+  <div class="kpi-row">
+    <div class="kpi"><b>$1.52B</b><span>scheduling market by 2032<span class="fn">1</span></span></div>
+    <div class="kpi"><b>15.7%</b><span>CAGR, online scheduling<span class="fn">1</span></span></div>
+    <div class="kpi"><b>26.1%</b><span>CAGR, healthcare AI scheduling<span class="fn">1</span></span></div>
+    <div class="kpi"><b>&pound;720</b><span>monthly no-show loss, 80 appts @15% &times; &pound;60<span class="fn">2</span></span></div>
+  </div>
+
+  <h3>What businesses already pay (published rates, checked Nov 2026)</h3>
+  <table>
+    <thead><tr><th>Category</th><th>Typical 2026 price</th><th>Examples</th></tr></thead>
+    <tbody>
+      <tr><td>Booking SaaS (links, forms)</td><td class="price">Free &ndash; $49/mo</td><td>Calendly $10/seat, Acuity $16&ndash;49, SimplyBook ~$8&ndash;25<span class="fn">3</span></td></tr>
+      <tr><td>AI receptionist (voice/chat)</td><td class="price">$14 &ndash; $299/mo</td><td>Carly ~$35, Rosie $49&ndash;299, Goodcall $79&ndash;299, Voksha $14&ndash;99<span class="fn">3,4</span></td></tr>
+      <tr><td>Human-backed reception</td><td class="price">$150 &ndash; $1,200/mo</td><td>Smith.ai $150&ndash;500, Ruby ~$245&ndash;319<span class="fn">4</span></td></tr>
+      <tr><td>Custom AI booking build</td><td class="price">$5,000 &ndash; $50,000</td><td>Agencies: $1.5&ndash;5k setup + $500&ndash;1,500/mo retainer<span class="fn">5,6</span></td></tr>
+      <tr><td>White-label scheduling</td><td class="price">&euro;42+/client/mo</td><td>Trafft, SimplyBook partner programme<span class="fn">7</span></td></tr>
+      <tr><td>Booking scripts (code)</td><td class="price">$28 &ndash; $69</td><td>CodeCanyon top sellers; extended licences ~$999<span class="fn">8</span></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Competitive map &mdash; the gap you sell into</h3>
+  <table>
+    <thead><tr><th>Competitor</th><th>What they are</th><th>The gap you exploit</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Calendly / Acuity / SimplyBook</strong></td><td>Booking links and forms; the customer must already want a slot.</td><td>No conversation, no qualification, no 9pm WhatsApp answer. You sit <em>in front</em> of a booking link.</td></tr>
+      <tr><td><strong>Carly / Rosie / Goodcall</strong></td><td>Hosted AI receptionists at $35&ndash;299/mo.</td><td>Rented per seat, no code, no self-hosting, no data ownership, no custom vertical rules.</td></tr>
+      <tr><td><strong>Smith.ai / Ruby</strong></td><td>Human or hybrid answering at $150&ndash;1,200/mo.</td><td>Cost scales with volume; no instant chat; no 24/7 chat at 1/10th the price.</td></tr>
+      <tr><td><strong>Agency custom build</strong></td><td>$5k&ndash;50k project, months of delivery.</td><td>You deliver in days at a fraction of the price, with a tested product behind it.</td></tr>
+      <tr><td><strong>Marketplace scripts</strong></td><td>$28&ndash;69 PHP booking scripts.</td><td>No AI, no WhatsApp dedupe, no tests, no deploy story, no support.</td></tr>
+      <tr style="background:#eef6f5"><td><strong>This system</strong></td><td>Conversational AI + owned calendar + reminders + dashboard + tests.</td><td><strong>&pound;249 license &middot; &pound;1,500&ndash;3,900 done-for-you &middot; &pound;79&ndash;799/mo hosted.</strong></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout gold">
+    <p><strong>The wedge:</strong> every competitor either rents you a black box or sells you a project. This is the only offer that gives a small business AI booking <em>and</em> the keys: their database, their AI key, their host, exit any time. For agencies that is the whole pitch &mdash; white-label without a vendor lock-in story to apologise for.</p>
+  </div>
+
+  <div class="page-foot"><span>AI Appointment Booking System &mdash; Commercial Kit</span><span>3 / 12</span></div>
+</section>
+
+<!-- ============================== 4 PRICING ============================== -->
+<section class="page">
+  <div class="page-head"><span class="label">03 &middot; Pricing</span><span class="num">4</span></div>
+  <h2>Three revenue models, market-tested prices</h2>
+  <div class="rule"></div>
+  <p>Choose one as the primary. The recommended order: <strong>done-for-you first</strong> (fastest cash, builds case studies), <strong>source licences second</strong> (passive, no support burden), <strong>hosted retainers third</strong> (recurring, scales with trust).</p>
+
+  <h3>1 &middot; Done-for-you installation <span class="tag">primary</span></h3>
+  <table>
+    <thead><tr><th>Tier</th><th>Includes</th><th class="num">Setup</th><th class="num">Monthly</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Starter</strong></td><td>One location, booking chat on their site, email confirmations, 24h/1h reminders, dashboard</td><td class="num price">&pound;1,500</td><td class="num price">&pound;199</td></tr>
+      <tr><td><strong>Growth</strong> <span class="tag gold">most sold</span></td><td>Starter + CRM bridge, cancel/reschedule, live updates, installable app, Resend/Twilio, monthly tuning</td><td class="num price">&pound;2,900</td><td class="num price">&pound;399</td></tr>
+      <tr><td><strong>Connected</strong></td><td>Growth + integration with their PMS/calendar, reconciliation, drift alerts</td><td class="num price">&pound;3,900</td><td class="num price">&pound;499</td></tr>
+      <tr><td><strong>Multi-site / white-label</strong></td><td>Several locations, custom domain, their branding, priority support</td><td class="num price">&pound;6,000&ndash;12,000</td><td class="num price">&pound;900&ndash;2,000</td></tr>
+    </tbody>
+  </table>
+  <p class="tiny">Market check: custom AI booking builds quote $5,000&ndash;50,000, and agencies charge $1,500&ndash;5,000 setup + $500&ndash;1,500/month for one workflow. Growth at &pound;2,900 + &pound;399 is deliberately <em>below</em> that band &mdash; room to raise after five clients.</p>
+
+  <h3>2 &middot; Source licence (the codebase)</h3>
+  <table>
+    <thead><tr><th>Licence</th><th>Who buys it</th><th>Terms</th><th class="num">Price</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Personal</strong></td><td>Owner-operator self-hosting one business</td><td>1 business, 12 months updates, 14-day setup support, no resale</td><td class="num price">&pound;249</td></tr>
+      <tr><td><strong>Commercial</strong></td><td>Freelancer delivering for one client</td><td>1 client deployment, same terms, invoice-friendly</td><td class="num price">&pound;499</td></tr>
+      <tr><td><strong>Extended / white-label</strong></td><td>Agencies, multi-site groups, resellers</td><td>Unlimited client deployments under their brand, priority support, 20% upgrade credit</td><td class="num price">&pound;1,499&ndash;4,999</td></tr>
+    </tbody>
+  </table>
+
+  <h3>3 &middot; Managed hosting (per client instance)</h3>
+  <table>
+    <thead><tr><th>Plan</th><th>Includes</th><th class="num">Monthly</th></tr></thead>
+    <tbody>
+      <tr><td>Hosted instance</td><td>Their own deployment + database, hosting, snapshots, updates, uptime monitoring</td><td class="num price">&pound;79&ndash;149</td></tr>
+      <tr><td>Hosted + integration</td><td>Above + bridge monitoring and reconciliation</td><td class="num price">&pound;149&ndash;299</td></tr>
+      <tr><td>White-label hosting</td><td>Their domain and branding, you stay invisible</td><td class="num price">&pound;299&ndash;799</td></tr>
+    </tbody>
+  </table>
+
+  <div class="grid-2">
+    <div class="card sand">
+      <h3 style="margin-top:0">Add-ons (price every one)</h3>
+      <ul style="margin-bottom:0">
+        <li><strong>Installation service:</strong> &pound;499</li>
+        <li><strong>PMS/calendar integration:</strong> &pound;600&ndash;3,500</li>
+        <li><strong>Branding pass:</strong> &pound;299</li>
+        <li><strong>Training video:</strong> &pound;199</li>
+        <li><strong>Extra vertical config:</strong> &pound;150</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Rules that protect the price</h3>
+      <ul style="margin-bottom:0">
+        <li>Never discount the monthly &mdash; shorten scope instead.</li>
+        <li>Pilot: 30 days at 50% of monthly, <strong>no setup discount</strong>, auto-converts.</li>
+        <li>No free integrations &mdash; that is where the hours hide.</li>
+        <li>Quote in writing; list exclusions explicitly.</li>
+        <li>Raise prices after every five clients; grandfather existing for 12 months.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="page-foot"><span>AI Appointment Booking System &mdash; Commercial Kit</span><span>4 / 12</span></div>
+</section>
+
+<!-- ============================== 5 CODEBASE SALE ============================== -->
+<section class="page">
+  <div class="page-head"><span class="label">04 &middot; Selling the codebase</span><span class="num">5</span></div>
+  <h2>The source-code business</h2>
+  <div class="rule"></div>
+  <p>A second income stream with near-zero marginal cost. The trick is to sell to <strong>people who already have customers</strong> &mdash; agencies, freelancers, and operators &mdash; not to hobbyists hunting for free GitHub projects.</p>
+
+  <div class="grid-2">
+    <div>
+      <h3>Who buys a &pound;249&ndash;4,999 licence</h3>
+      <ul>
+        <li><strong>Web agencies</strong> with clinic/salon clients: white-label at &pound;1,499+, charge their client &pound;2,500+.</li>
+        <li><strong>Upwork/Fiverr freelancers</strong>: buy Commercial at &pound;499, resell delivery at &pound;1,500&ndash;3,000.</li>
+        <li><strong>Automation consultants</strong>: add appointment booking to their n8n/Make stack.</li>
+        <li><strong>Owner-operators</strong>: self-host for the price of a year of Calendly.</li>
+        <li><strong>SaaS builders</strong>: use it as the core of a niche product (extended licence).</li>
+      </ul>
+      <h3>Why they pick yours over a $69 script</h3>
+      <ul>
+        <li>AI conversation + WhatsApp inbound with retry dedupe &mdash; not a form.</li>
+        <li>70 tests and a demo script prove it works; buyers of scripts usually can't verify anything.</li>
+        <li>Dockerfile + fly.toml + render.yaml + compose &mdash; deploys in minutes.</li>
+        <li>Zero npm dependencies &mdash; no `npm audit` nightmare, no abandoned package tree.</li>
+        <li>Real docs: README with API, security model, go-live checklist.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="card navy">
+        <h3 style="margin-top:0">Recommended listing prices</h3>
+        <table style="margin:0;color:#fff">
+          <tbody>
+            <tr><td style="border-color:rgba(255,255,255,.15)">Personal licence</td><td class="num price" style="color:#fff;border-color:rgba(255,255,255,.15)">&pound;249</td></tr>
+            <tr><td style="border-color:rgba(255,255,255,.15)">Commercial (1 client)</td><td class="num price" style="color:#fff;border-color:rgba(255,255,255,.15)">&pound;499</td></tr>
+            <tr><td style="border-color:rgba(255,255,255,.15)">Extended / white-label</td><td class="num price" style="color:#fff;border-color:rgba(255,255,255,.15)">&pound;1,499&ndash;4,999</td></tr>
+            <tr><td style="border:0">Installation service</td><td class="num price" style="color:#fff;border:0">&pound;499</td></tr>
+          </tbody>
+        </table>
+        <p class="tiny" style="margin-top:3mm;color:#a9bacd">Marketplace anchors: CodeCanyon booking scripts sell at $28&ndash;69 with extended licences around $999<span class="fn">8</span>. Your AI + tests + WhatsApp justification puts you at the top of that band, not inside it.</p>
+      </div>
+      <div class="callout gold" style="margin-top:4mm">
+        <p><strong>Margin math:</strong> 20 direct sales at &pound;249 = <strong>&pound;4,980</strong>, minus ~5% MoR fees &asymp; <strong>&pound;4,730</strong>. Support: 1&ndash;2 hours total if the docs are good. The same 20 sales on a marketplace at 55% commission net about &pound;2,240 &mdash; use the marketplace for discovery, the own store for margin.</p>
+      </div>
+    </div>
+  </div>
+
+  <h3>Where to list it &mdash; and what each channel costs</h3>
+  <table>
+    <thead><tr><th>Channel</th><th class="num">Commission</th><th>Sells</th><th>Verdict</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Own store</strong> (Lemon Squeezy / Payhip)</td><td class="num">5% + $0.50 <span class="fn">9</span></td><td>All licence tiers</td><td><span class="tag">best margin</span> MoR handles VAT; you drive traffic</td></tr>
+      <tr><td><strong>Gumroad</strong></td><td class="num">~13&ndash;16% <span class="fn">9</span></td><td>Personal / Commercial</td><td>Easy, but fees add up; Discover takes 30%</td></tr>
+      <tr><td><strong>CodeCanyon</strong></td><td class="num">tiered, ~38&ndash;55% <span class="fn">8</span></td><td>$99&ndash;199 + $999 extended</td><td>Discovery machine; exclusivity rules apply</td></tr>
+      <tr><td><strong>Codester</strong></td><td class="num">30% (you keep 70%) <span class="fn">10</span></td><td>Niche scripts</td><td>No exclusivity &mdash; safe secondary listing</td></tr>
+      <tr><td><strong>Flippa / Acquire.com</strong></td><td class="num">listing/success fee</td><td>Whole business, code included</td><td>Only once you have recurring revenue; Acquire listings typically $10k+ <span class="fn">11</span></td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout">
+    <p><strong>How to sell the codebase well:</strong> publish a live demo, not screenshots. Include the test output in the listing ("70/70 passing"), a 90-second Loom and a licence-agreement PDF. Offer a &pound;499 installation add-on to every buyer &mdash; roughly 1 in 5 takes it, and it converts a &pound;249 sale into a &pound;700 relationship.</p>
+  </div>
+
+  <div class="page-foot"><span>AI Appointment Booking System &mdash; Commercial Kit</span><span>5 / 12</span></div>
+</section>
+
+<!-- ============================== 6 CHANNELS ============================== -->
+<section class="page">
+  <div class="page-head"><span class="label">05 &middot; Where to sell</span><span class="num">6</span></div>
+  <h2>Channels ranked by realistic return</h2>
+  <div class="rule"></div>
+  <p>You cannot do all of these at once. The plan: <strong>two outreach channels</strong> (direct + Upwork) until client five, then <strong>two passive channels</strong> (own store + marketplace) once the product has proof.</p>
+
+  <table>
+    <thead><tr><th>Channel</th><th>What you sell there</th><th class="num">Typical return</th><th>Effort</th><th>Start when</th></tr></thead>
+    <tbody>
+      <tr><td><strong>Direct outreach</strong> (email + LinkedIn, local clinics/salons)</td><td>Done-for-you Growth &pound;2,900 + &pound;399/mo</td><td class="num">1 client per 60&ndash;100 contacts</td><td>High</td><td><span class="tag">day 1</span></td></tr>
+      <tr><td><strong>Upwork</strong> (10% fee)</td><td>Setup projects &pound;1,500&ndash;5,000</td><td class="num">2&ndash;5 proposals per interview</td><td>Medium</td><td><span class="tag">day 1</span></td></tr>
+      <tr><td><strong>Agency partnerships</strong></td><td>White-label licence + 15% rev share</td><td class="num">1 partner = 3&ndash;10 deployments</td><td>Medium</td><td>after 2 case studies</td></tr>
+      <tr><td><strong>Own store</strong> (Lemon Squeezy)</td><td>Source licences &pound;249&ndash;4,999</td><td class="num">1&ndash;3% of visitors buy</td><td>Low after setup</td><td>after demo polish</td></tr>
+      <tr><td><strong>CodeCanyon / Codester</strong></td><td>Script + extended licence</td><td class="num">$99&ndash;199 per sale, passive</td><td>Low after listing</td><td>month 2&ndash;3</td></tr>
+      <tr><td><strong>LinkedIn content</strong></td><td>Demos &rarr; inbound calls</td><td class="num">slow, compounds</td><td>Medium</td><td>day 1 (3 posts/wk)</td></tr>
+      <tr><td><strong>Google/Meta ads</strong></td><td>Demo bookings</td><td class="num">&pound;30&ndash;80 per booked call</td><td>Medium, needs budget</td><td>after 2 case studies</td></tr>
+      <tr><td><strong>Flippa / Acquire</strong></td><td>Whole business with code</td><td class="num">$10k&ndash;50k+ with MRR</td><td>Low</td><td>only at exit</td></tr>
+      <tr><td><strong>Fiverr</strong></td><td>Cheap installs</td><td class="num">&pound;50&ndash;200 gigs, 20% fee</td><td>Low</td><td><span class="tag red">skip</span> devalues the offer</td></tr>
+    </tbody>
+  </table>
+
+  <h3>Where the buyers actually are (build these lists first)</h3>
+  <div class="grid-2">
+    <div class="card">
+      <h4>Dental &amp; medical (highest value)</h4>
+      <ul class="small" style="margin-bottom:0">
+        <li>Google Maps: "dental practice" within 10 miles &mdash; collect owner/manager names.</li>
+        <li>UK: General Dental Council register, practice websites.</li>
+        <li>Facebook groups for practice managers.</li>
+        <li>Dentally / Cliniko / SOE user communities.</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h4>Salons, med-spas &amp; studios</h4>
+      <ul class="small" style="margin-bottom:0">
+        <li>Fresha / Phorest / Timely "find a salon" directories.</li>
+        <li>Instagram: local studios with "DM to book" in bio &mdash; instant pain.</li>
+        <li>Local business chambers and BNI chapters.</li>
+        <li>Bridal / events planners (seasonal spikes).</li>
+      </ul>
+    </div>
+  </div>
+
+  <h3>Upwork and Fiverr specifics</h3>
+  <ul>
+    <li><strong>Upwork:</strong> search "appointment booking", "AI chatbot booking", "Calendly integration". Bid only on posts with a budget above &pound;500; attach the live demo link and a 3-line plan, never a generic pitch. Upwork's freelancer fee is 10%.</li>
+    <li><strong>Fiverr:</strong> gigs start at &pound;50 and attract buyers who will not pay for value. Use it only as a funnel to a paid demo call, or not at all.</li>
+  </ul>
+
+  <div class="callout gold">
+    <p><strong>One-line channel strategy:</strong> direct outreach pays the bills this quarter, agencies compound next quarter, and the codebase store earns while you sleep &mdash; in that order.</p>
+  </div>
+
+  <div class="page-foot"><span>AI Appointment Booking System &mdash; Commercial Kit</span><span>6 / 12</span></div>
+</section>
+
+<!-- ============================== 7 MARKETING ============================== -->
+<section class="page">
+  <div class="page-head"><span class="label">06 &middot; Marketing plays</span><span class="num">7</span></div>
+  <h2>Eight strategies, in order of ROI</h2>
+  <div class="rule"></div>
+
+  <div class="play">
+    <h3>1 &middot; "Your services, live in 24 hours" demo funnel</h3>
+    <div class="meta"><b>Cost:</b> free&ndash;&pound;50/mo &middot; <b>Effort:</b> high &middot; <b>Payback:</b> first client</div>
+    <p style="margin:0">Rebrand the demo with the prospect's services and hours (a two-minute config change), then send a 60-second Loom of their own services being booked. 15 targeted sends/day beat 500 generic ones; track opens and follow up twice.</p>
+  </div>
+
+  <div class="play">
+    <h3>2 &middot; Case-study engine (pilots for proof)</h3>
+    <div class="meta"><b>Cost:</b> 50% of one month's fee &middot; <b>Effort:</b> medium &middot; <b>Payback:</b> every later sale</div>
+    <p style="margin:0">Run three 30-day pilots at half the monthly fee (never free, no setup discount) for numbers and a testimonial. Measure response time, bookings handled and no-show rate. One honest result &mdash; "no-shows fell from 15% to 6%" &mdash; outsells any feature list.</p>
+  </div>
+
+  <div class="play">
+    <h3>3 &middot; No-show loss calculator (lead magnet)</h3>
+    <div class="meta"><b>Cost:</b> one landing page &middot; <b>Effort:</b> low &middot; <b>Payback:</b> email list + qualified leads</div>
+    <p style="margin:0">A simple page: appointments &times; no-show rate &times; average value = money lost per year. Capture the email for the full result, then send a 3-email sequence ending in "watch the 60-second demo".</p>
+  </div>
+
+  <div class="play">
+    <h3>4 &middot; Marketplace &amp; search discovery</h3>
+    <div class="meta"><b>Cost:</b> listing time &middot; <b>Effort:</b> low &middot; <b>Payback:</b> passive sales</div>
+    <p style="margin:0">List on CodeCanyon and Codester; build a landing page for long-tail searches: "self-hosted AI booking system", "WhatsApp booking bot", "AI receptionist for dental practice". Comparison tables against Calendly win those clicks.</p>
+  </div>
+
+  <div class="play">
+    <h3>5 &middot; Agency partnership programme</h3>
+    <div class="meta"><b>Cost:</b> 15% rev share &middot; <b>Effort:</b> medium &middot; <b>Payback:</b> compounding</div>
+    <p style="margin:0">Offer agencies a white-label licence (&pound;1,499), a partner kit (demo, one-pager, pricing, proposal) and 15% recurring share on hosted plans. They own the client relationships; you supply the product. Pitch 20 agencies building clinic/salon sites.</p>
+  </div>
+
+  <div class="play">
+    <h3>6 &middot; Short-form video (45 seconds, no talking head)</h3>
+    <div class="meta"><b>Cost:</b> free &middot; <b>Effort:</b> medium &middot; <b>Payback:</b> inbound + credibility</div>
+    <p style="margin:0">Screen-record the booking flow on a phone: "book a hygiene appointment next week" &rarr; slot &rarr; confirmation. Post 3&times;/week on LinkedIn, TikTok and Reels; pin the demo link. Cheapest trust-builder for a product whose value only shows when seen.</p>
+  </div>
+
+  <div class="play">
+    <h3>7 &middot; Paid ads (only after two case studies)</h3>
+    <div class="meta"><b>Cost:</b> &pound;10&ndash;20/day &middot; <b>Effort:</b> medium &middot; <b>Payback:</b> &pound;30&ndash;80 per booked call</div>
+    <p style="margin:0">Meta ads within a 10-mile radius of the target town, and Google Search on "appointment booking system [city]" and "AI receptionist [vertical]". Send traffic to the personalised demo, not the homepage. Kill any campaign that costs more than one-third of a setup fee per booked call.</p>
+  </div>
+
+  <div class="play">
+    <h3>8 &middot; Email nurture + seasonal campaigns</h3>
+    <div class="meta"><b>Cost:</b> &pound;0&ndash;20/mo &middot; <b>Effort:</b> low &middot; <b>Payback:</b> recovery of "not now" leads</div>
+    <p style="margin:0">Monthly note: one feature, one client result, one tip. Two seasonal pushes &mdash; January (no-show season) and September (autumn schedules). Most "not now" buyers convert within 3&ndash;6 months of staying warm.</p>
+  </div>
+
+  <div class="page-foot"><span>AI Appointment Booking System &mdash; Commercial Kit</span><span>7 / 12</span></div>
+</section>
+
+<!-- ============================== 8 SCRIPTS ============================== -->
+<section class="page">
+  <div class="page-head"><span class="label">07 &middot; Pitch scripts</span><span class="num">8</span></div>
+  <h2>Words that sell it</h2>
+  <div class="rule"></div>
+
+  <h3>Cold email (subject: "your 9pm enquiries")</h3>
+  <div class="script">Hi {firstName} &mdash; I build AI booking assistants for {vertical} practices.
+It answers website enquiries in seconds, checks your real diary and books
+the slot &mdash; plus 24h/1h reminders that cut no-shows.
+
+I put {practiceName}'s services into a demo &mdash; want the 60-second video?
+If it's not useful, just say so. {name} &middot; {phone} &middot; {demo link}</div>
+
+  <h3>LinkedIn DM (after they view your profile or the demo post)</h3>
+  <div class="script">Hi {firstName} &mdash; do after-hours enquiries at {practice} wait until
+morning? I built an assistant that answers and books into the real diary,
+with reminders. Want a 60-second demo with your services in it? No pitch.</div>
+
+  <h3>Upwork proposal opener</h3>
+  <div class="script">You want {their outcome in their words}. I can show it working today, not
+in six weeks: [link] &mdash; book a slot, then open /admin to see it land.
+
+Plan: {1} services + hours, {2} connect {their calendar/tool} or use the
+built-in diary, {3} test bookings + handover. Fixed {X}, in {Y} days.</div>
+
+  <h3>Discovery call opener (60 seconds)</h3>
+  <p>"Before I show you anything &mdash; how do customers book today, and what happens to a message that arrives at 9pm?" <em>Let them talk for two minutes. The demo then answers exactly what they said.</em></p>
+
+  <h3>Objection handling</h3>
+  <table>
+    <thead><tr><th>They say</th><th>You say</th></tr></thead>
+    <tbody>
+      <tr><td>"We already use Fresha/Cliniko/Dentally."</td><td>"Good &mdash; it stays the system of record. The assistant sits in front and pushes every booking in; reconciliation catches drift. You keep everything, you just stop missing enquiries."</td></tr>
+      <tr><td>"AI will say something wrong."</td><td>"The model only classifies and collects. Availability, pricing and confirmation are deterministic code. Anything clinical or out of scope is escalated &mdash; it never guesses. And if the AI is down, booking still works."</td></tr>
+      <tr><td>"Too expensive."</td><td>"What is one no-show worth? 80 appointments at 15% is 12 empty slots &mdash; at &pound;60 that is &pound;720 a month. Recover three and this pays for itself twice over."</td></tr>
+      <tr><td>"We tried a chatbot &mdash; useless."</td><td>"Most are FAQ widgets. This one owns the calendar, refuses double bookings and sends the reminders. Show me your diary and I'll prove it with one test booking."</td></tr>
+      <tr><td>"Data protection?"</td><td>"Their data lives in your database, your provider accounts, your host &mdash; one deployment per business. Here is the retention and deletion policy in one page."</td></tr>
+      <tr><td>"Can we just buy the code?"</td><td>"Yes &mdash; single-business licence with 14 days of setup support. Most owners take the managed version for updates and monitoring."</td></tr>
+    </tbody>
+  </table>
+
+  <h3>The close: do the sum on the call</h3>
+  <div class="callout">
+    <p>"12 missed slots &times; &pound;60 = <strong>&pound;720 lost every month</strong>. Growth is &pound;399. If it recovers three bookings a month you are ahead &mdash; and it answers every 9pm enquiry from day one."</p>
+  </div>
+  <p class="tiny">Never quote a generic percentage. Ask for their numbers, write them on screen, and let the arithmetic do the closing.</p>
+
+  <div class="page-foot"><span>AI Appointment Booking System &mdash; Commercial Kit</span><span>8 / 12</span></div>
+</section>
+
+<!-- ============================== 9 PLAN ============================== -->
+<section class="page">
+  <div class="page-head"><span class="label">08 &middot; Launch plan</span><span class="num">9</span></div>
+  <h2>90 days from zero to first revenue</h2>
+  <div class="rule"></div>
+
+  <table>
+    <thead><tr><th style="width:22%">Phase</th><th>Do this</th><th>Success measure</th></tr></thead>
+    <tbody>
+      <tr>
+        <td><strong>Days 1&ndash;7</strong><br><span class="small">Assets</span></td>
+        <td>
+          <ul class="small" style="margin:0 0 0 4mm">
+            <li>Deploy the demo publicly; create three configs: dental, salon, tutor/studio.</li>
+            <li>Record three Looms: booking flow (90s), dashboard (60s), WhatsApp (60s).</li>
+            <li>Write the one-pager, this pricing sheet, a licence PDF and a security one-pager.</li>
+            <li>Set up the store (Lemon Squeezy) and the no-show calculator page.</li>
+          </ul>
+        </td>
+        <td class="small">Demo live; assets ready to send without editing.</td>
+      </tr>
+      <tr>
+        <td><strong>Days 8&ndash;30</strong><br><span class="small">Outreach</span></td>
+        <td>
+          <ul class="small" style="margin:0 0 0 4mm">
+            <li>Build a list of 150 local practices; 15 personalised emails/day, two follow-ups.</li>
+            <li>Post one LinkedIn demo clip per day; join three vertical groups and answer questions.</li>
+            <li>Send 10 Upwork proposals per week to relevant posts.</li>
+            <li>Run first two pilots at 50% monthly.</li>
+          </ul>
+        </td>
+        <td class="small">5+ demo calls booked; 2 pilots running.</td>
+      </tr>
+      <tr>
+        <td><strong>Days 31&ndash;60</strong><br><span class="small">Proof &amp; price</span></td>
+        <td>
+          <ul class="small" style="margin:0 0 0 4mm">
+            <li>Convert pilots; record before/after numbers and testimonials.</li>
+            <li>Publish the first case study and add it to every outreach template.</li>
+            <li>Raise setup by 10&ndash;15%; introduce the Connected tier.</li>
+            <li>Pitch 20 web agencies the white-label partnership.</li>
+          </ul>
+        </td>
+        <td class="small">1&ndash;3 paying clients; 1&ndash;2 agency conversations.</td>
+      </tr>
+      <tr>
+        <td><strong>Days 61&ndash;90</strong><br><span class="small">Passive income</span></td>
+        <td>
+          <ul class="small" style="margin:0 0 0 4mm">
+            <li>Publish on CodeCanyon and Codester; list the own-store licence.</li>
+            <li>Start the monthly email nurture and the January campaign plan.</li>
+            <li>Consider a small Meta test (&pound;10/day) against the best-performing case study.</li>
+            <li>Review funnel: contacts &rarr; calls &rarr; pilots &rarr; paid; fix the worst step.</li>
+          </ul>
+        </td>
+        <td class="small">First codebase sale; 3&ndash;5 recurring clients; predictable pipeline.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <div class="grid-2">
+    <div class="card sand">
+      <h3 style="margin-top:0">Weekly scoreboard (keep five numbers)</h3>
+      <ul class="small" style="margin-bottom:0">
+        <li>Outreach sent (target 75/week)</li>
+        <li>Demo calls booked (target 5/week)</li>
+        <li>Demo &rarr; paid conversion (healthy 25&ndash;40%)</li>
+        <li>Setup hours per client (must fall below 6 by client five)</li>
+        <li>Support minutes per client per month</li>
+      </ul>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">What to fix if growth stalls</h3>
+      <ul class="small" style="margin-bottom:0">
+        <li>No demos? The email subject, not the product.</li>
+        <li>Demos but no pilots? Price or trust &mdash; add a case study.</li>
+        <li>Pilots but no conversions? The success criteria were never written down.</li>
+        <li>Churn after month two? They never got the dashboard habit &mdash; do a 20-minute training call.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout gold">
+    <p><strong>Discipline that matters most:</strong> one vertical for the first ten clients. Reusing the demo, the copy and the integration story is what turns delivery from a project into a product &mdash; and margin from &pound;50/hour into &pound;500/hour.</p>
+  </div>
+
+  <div class="page-foot"><span>AI Appointment Booking System &mdash; Commercial Kit</span><span>9 / 12</span></div>
+</section>
+
+<!-- ============================== 10 ECONOMICS ============================== -->
+<section class="page">
+  <div class="page-head"><span class="label">09 &middot; Unit economics</span><span class="num">10</span></div>
+  <h2>The numbers behind the price</h2>
+  <div class="rule"></div>
+
+  <h3>What the buyer pays to run it (and why the price is easy to justify)</h3>
+  <table>
+    <thead><tr><th>Cost</th><th>Rate</th><th>Typical month</th></tr></thead>
+    <tbody>
+      <tr><td>Hosting (one container, 1&nbsp;GB volume)</td><td class="price">&pound;3&ndash;4/mo</td><td class="price">&asymp; &pound;4</td></tr>
+      <tr><td>AI (Flash-class model)</td><td class="price">&pound;0.002&ndash;0.01 / conversation</td><td class="price">&asymp; &pound;1&ndash;3</td></tr>
+      <tr><td>SMS reminders (UK)</td><td class="price">&asymp; &pound;0.04 / message</td><td class="price">&asymp; &pound;8&ndash;25</td></tr>
+      <tr><td>Email (Resend)</td><td class="price">free tier</td><td class="price">&pound;0</td></tr>
+      <tr><td>Domain</td><td class="price">&pound;10&ndash;15/year</td><td class="price">&asymp; &pound;1</td></tr>
+      <tr style="background:#eef6f5"><td><strong>Total running cost</strong></td><td></td><td class="price"><strong>&pound;14&ndash;33 / month</strong></td></tr>
+    </tbody>
+  </table>
+
+  <h3>Your margin per revenue stream</h3>
+  <div class="kpi-row">
+    <div class="kpi"><b>&pound;2,400</b><span>gross on a &pound;2,900 setup<br>(~10h delivery)</span></div>
+    <div class="kpi"><b>96%</b><span>margin on a &pound;99 hosted plan<br>(&pound;4 cost)</span></div>
+    <div class="kpi"><b>~&pound;236</b><span>net on a &pound;249 licence sale<br>(~5% fees)</span></div>
+    <div class="kpi"><b>&pound;67</b><span>net per marketplace sale<br>at $149, 55% share</span></div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <h3 style="margin-top:0">Break-even</h3>
+      <p class="small">Tooling and hosting cost less than <strong>&pound;30/month</strong>. One hosted client at &pound;99 covers everything; one Growth setup funds three months of runway. There is no inventory, no ad spend required, and no staff until roughly 15&ndash;20 hosted clients.</p>
+    </div>
+    <div class="card">
+      <h3 style="margin-top:0">Why not price lower</h3>
+      <p class="small">At &pound;999 setup this looks like a side-project script and attracts buyers who expect unlimited changes. At &pound;2,900 it competes with custom builds quoting &pound;5,000+ &mdash; and wins on speed. Cheap pricing also breaks the hosting story: &pound;399/month is what pays for monitoring, updates and support.</p>
+    </div>
+  </div>
+
+  <h3>Steady-state example (12 months in)</h3>
+  <table>
+    <thead><tr><th>Stream</th><th class="num">Units</th><th class="num">Each</th><th class="num">Monthly</th></tr></thead>
+    <tbody>
+      <tr><td>Hosted retainers (&pound;399 Growth)</td><td class="num">8</td><td class="num">&pound;399</td><td class="num price">&pound;3,192</td></tr>
+      <tr><td>New setups (&pound;2,900, one per month)</td><td class="num">1</td><td class="num">&pound;2,900</td><td class="num price">&pound;2,900</td></tr>
+      <tr><td>Source licences (&pound;249 avg)</td><td class="num">4</td><td class="num">&pound;249</td><td class="num price">&pound;996</td></tr>
+      <tr><td>Add-ons (install, branding)</td><td class="num">&mdash;</td><td class="num">&mdash;</td><td class="num price">&pound;400</td></tr>
+      <tr style="background:#eef6f5"><td><strong>Gross monthly</strong></td><td></td><td></td><td class="num price"><strong>&asymp; &pound;7,500</strong></td></tr>
+      <tr><td>Costs (hosting, AI, SMS, tooling)</td><td></td><td></td><td class="num">&asymp; &pound;150</td></tr>
+    </tbody>
+  </table>
+
+  <div class="callout gold">
+    <p><strong>Honest expectation setting:</strong> months 1&ndash;3 are outreach-heavy and uneven. The first client usually comes from direct contact or Upwork, not from a marketplace. Codebase sales only start moving once a demo and a case study exist &mdash; typically month 3+. Plan cash on the done-for-you line, not on passive sales.</p>
+  </div>
+
+  <div class="page-foot"><span>AI Appointment Booking System &mdash; Commercial Kit</span><span>10 / 12</span></div>
+</section>
+
+<!-- ============================== 11 CHECKLIST & LEGAL ============================== -->
+<section class="page">
+  <div class="page-head"><span class="label">10 &middot; Kit &amp; compliance</span><span class="num">11</span></div>
+  <h2>Everything to prepare before the first sale</h2>
+  <div class="rule"></div>
+
+  <div class="grid-2">
+    <div>
+      <h3>Sales assets</h3>
+      <ul class="checklist">
+        <li>Public demo URL with three vertical configs</li>
+        <li>Three Loom videos (booking, dashboard, WhatsApp)</li>
+        <li>One-pager PDF and this pricing document</li>
+        <li>Proposal template with scope + exclusions</li>
+        <li>Licence agreement PDF (all tiers)</li>
+        <li>Security &amp; data one-pager</li>
+        <li>Case study (after first pilots)</li>
+        <li>Branded email signature + simple site</li>
+      </ul>
+      <h3>Operational</h3>
+      <ul class="checklist">
+        <li>Stripe / Lemon Squeezy account for one-off sales</li>
+        <li>Invoice template (VAT number if registered)</li>
+        <li>Backup and monitoring runbook per client</li>
+        <li>Support policy: response times, included hours</li>
+        <li>Handover checklist (credentials, training, exit)</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Licence terms (summary to put in writing)</h3>
+      <ul class="small">
+        <li><strong>Grant:</strong> non-exclusive, non-transferable right to deploy for the number of businesses licensed.</li>
+        <li><strong>Restrictions:</strong> no resale of the source as source; no sub-licensing; no removing copyright notices from the licence file.</li>
+        <li><strong>Updates:</strong> 12 months of updates included; renewal at 40% of licence price.</li>
+        <li><strong>Support:</strong> 14 days of setup support included; ongoing support under a hosting plan.</li>
+        <li><strong>No warranty</strong> beyond the documented behaviour; no medical, legal or financial advice is provided by the assistant.</li>
+      </ul>
+      <h3>Data protection (UK GDPR)</h3>
+      <ul class="small">
+        <li>One deployment per business: data stays in the client's own database and provider accounts.</li>
+        <li>Provide a DPA template; the client is the controller, you are the processor when hosting.</li>
+        <li>Retention and deletion controls exist in the dashboard and documented in the README.</li>
+        <li>The assistant escalates clinical questions rather than answering them &mdash; say this in writing.</li>
+      </ul>
+      <h3>Tax &amp; selling mechanics</h3>
+      <ul class="small">
+        <li>Digital licences: use a merchant-of-record (Lemon Squeezy / Paddle) to handle VAT, or charge VAT yourself if registered.</li>
+        <li>Marketplace exclusivity: check before listing the same item on CodeCanyon and your own store.</li>
+        <li>Keep a simple register of licences issued (buyer, tier, date) for support and disputes.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="callout navy">
+    <p><strong>The one promise to never break:</strong> if you say the AI never double-books and always falls back safely, you must be able to show the tests. Keep the test output in the sales folder &mdash; it is the difference between a claim and a proof.</p>
+  </div>
+
+  <div class="page-foot"><span>AI Appointment Booking System &mdash; Commercial Kit</span><span>11 / 12</span></div>
+</section>
+
+<!-- ============================== 12 SOURCES ============================== -->
+<section class="page">
+  <div class="page-head"><span class="label">Appendix</span><span class="num">12</span></div>
+  <h2>Market data sources</h2>
+  <div class="rule"></div>
+  <p class="small">All figures checked November 2026. Prices change; re-verify before quoting a client.</p>
+
+  <ol class="small" style="margin-left:5mm; line-height:1.55">
+    <li>Taskade &mdash; <em>9 Best AI Booking Systems 2026</em> (market size, CAGR, Calendly/Acuity/SimplyBook/Cal.com pricing). taskade.com/blog/best-ai-booking-systems</li>
+    <li>No-show example computed from published appointment values and typical 10&ndash;15% no-show rates; adjust to the client's own numbers.</li>
+    <li>Vellum (AI scheduling tools 2026), Blyssbook (AI scheduling for salons 2026), Carly pricing summary (usecarly.com).</li>
+    <li>Zygobit (AI receptionist cost 2026), Voksha pricing, Callsono (AI receptionist pricing 2026), Aircall (virtual receptionist costs 2026), Simple Solutions cost comparison 2026 (Rosie, Goodcall, Smith.ai, Ruby ranges).</li>
+    <li>AIMakers &mdash; <em>Custom AI Development Cost 2026</em> (chatbots $5k&ndash;20k, agents $20k&ndash;75k).</li>
+    <li>CloudMotiv &mdash; <em>AI Automation Agency Pricing 2026</em> ($1.5k&ndash;5k per workflow, $500&ndash;1,500/mo retainers, $8k&ndash;18k multi-workflow stacks).</li>
+    <li>Lunacal &mdash; <em>Best White Label Scheduling Software 2026</em> (Trafft &euro;42.10/client/mo, Cal.com $12/user/mo).</li>
+    <li>CodeCanyon appointment/booking script listings (top sellers $49&ndash;69, 197&ndash;2.9k sales, extended licences ~$999).</li>
+    <li>Freemius / Fourthwall / Lemon Squeezy comparison pages (Gumroad ~10% + processing, ~13&ndash;16% effective; Lemon Squeezy 5% + $0.50; Payhip 5%).</li>
+    <li>Codester seller page &mdash; 70% seller share, no exclusivity required.</li>
+    <li>SellMyCode &mdash; <em>Top 10 Source Code Selling Websites 2026</em> (Flippa, Acquire.com $10k+, Codester, AppKodes).</li>
+  </ol>
+
+  <div class="divider"></div>
+
+  <h3>Assumptions used in this document</h3>
+  <ul class="small">
+    <li>Prices in GBP (&pound;); USD figures are the published seller prices, not converted.</li>
+    <li>The system is sold as one deployment per business, not as multi-tenant SaaS.</li>
+    <li>Delivery time for a Growth install: 6&ndash;10 hours including configuration and testing.</li>
+    <li>AI cost assumes a Flash-class model at 200&ndash;400 conversations per month.</li>
+    <li>SMS cost assumes UK Twilio rates and one reminder per appointment.</li>
+  </ul>
+
+  <div class="callout gold" style="margin-top:6mm">
+    <p><strong>Next action (today):</strong> deploy the demo with a dental config, record the 90-second booking video, and build the first list of 25 local practices. The product is finished; the only variable left is distribution.</p>
+  </div>
+
+  <div class="page-foot"><span>AI Appointment Booking System &mdash; Commercial Kit</span><span>12 / 12</span></div>
+</section>
+
+</body>
+</html>
