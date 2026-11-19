@@ -1,6 +1,6 @@
 # Fly.io deployment: fly volumes create booking_data --size 1 --region lhr
 # then: fly secrets set STAFF_PASSWORD=... SESSION_SECRET=... RESEND_API_KEY=... TWILIO_AUTH_TOKEN=...
-app = "kiyaka-booking"
+app = "appointa"
 primary_region = "lhr"
 
 [build]
